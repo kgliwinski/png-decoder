@@ -13,11 +13,8 @@ with open(FILE_PATH, 'rb') as png:
         tmp.append(byte)
         if byte == b'\n' and i == 0:
             signature = tmp.copy()
-            i+=1
+            i += 1
             tmp.clear()
-        
-
-        
 
 
 print(len(signature))

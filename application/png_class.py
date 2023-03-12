@@ -1,12 +1,24 @@
 import logging as log
 # import numpy as np
 
-log.basicConfig(format='%(asctime)s %(message)s', level=log.DEBUG)
+"""
+https://iter.ca/post/png/
+"""
 
 
 class Png:
     signature = []
-    header = []
+    header = {
+        "length": [],
+        "type": [],
+        "data": [],
+        "crc32": []
+    }
+    trailer = {
+        "length" : [],
+        "type" : [],
+        "crc32": []
+    }
     bytes = []
     # file_png = ''
 
@@ -28,3 +40,9 @@ class Png:
                 break
         log.debug("Read signature:\n %s", self.signature)
         return len(self.signature)
+
+    def get_header(self):
+        pass
+
+    def get_trailer(self):
+        pass
