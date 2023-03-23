@@ -29,10 +29,14 @@ class Chunk:
 
         self.read_length()
         self.read_chunk_type()
-        if (self.chunk_type == 'IHDR'):
-            self.__class__ = IHDR
         self.read_data()
         self.read_crc32()
+        if (self.chunk_type == 'IHDR'):
+            self.__class__ = IHDR
+        elif (self.chunk_type == 'PLTE'):
+            self.__class__ = PLTE
+        elif (self.chunk_type == 'IEND'):
+            self.__class__ = IEND
 
     def read_length(self):
         """
@@ -45,7 +49,7 @@ class Chunk:
 
         # log.debug(length)
         self.chunk_length = int.from_bytes(length, 'big', signed=False)
-        log.debug("Chunk length: %d", self.chunk_length)
+        log.info("Chunk length: %d", self.chunk_length)
 
     def read_chunk_type(self):
         """
@@ -57,7 +61,7 @@ class Chunk:
         chunk_type = self.file_ptr.read(self.TYPE_FIELD_LEN)
         # log.debug(chunk_type)
         self.chunk_type = chunk_type.decode('ascii')
-        log.debug("Chunk type: %s", self.chunk_type)
+        log.info("Chunk type: %s", self.chunk_type)
 
     def read_data(self):
         """
@@ -66,7 +70,7 @@ class Chunk:
         """
         data = self.file_ptr.read(self.chunk_length)
         self.chunk_data = data
-        log.debug("Chunk data: %s", data)
+        # log.info("Chunk data: %s", data)
 
     def read_crc32(self):
         """
@@ -78,7 +82,7 @@ class Chunk:
 
         # log.debug(crc32)
         self.crc32_value = int.from_bytes(crc32, 'big')
-        log.debug("Chunk crc32: %d", self.crc32_value)
+        log.info("Chunk crc32: %d", self.crc32_value)
 
     def get_length(self) -> int:
         """
@@ -94,12 +98,12 @@ class Chunk:
 
 
 class IHDR(Chunk):
-    img_data = {
+    hdr_data = {
         "width": int,
         "height": int,
         "bit_depth": int,
         "color_type": int,
-        "color_type_str": str,
+        "color_type_str": str(None),
         "compression_method": int,
         "filter_method": int,
         "interlace_method": int
@@ -108,40 +112,90 @@ class IHDR(Chunk):
     def __init__(self) -> None:
         pass
 
-    def process_img_data(self) -> bool:
+    def process_hdr_data(self) -> bool:
         """
-        Processes the image data from raw bytes to img_data values,
+        Processes the image data from raw bytes to hdr_data values,
         as well as determines decoded color_type, checks if given bit_depth
         is allowed with this color_type
         """
-        self.img_data["width"] = int.from_bytes(self.chunk_data[0:4], 'big')
-        self.img_data["height"] = int.from_bytes(self.chunk_data[4:8], 'big')
-        self.img_data["bit_depth"] = int(self.chunk_data[8])
-        self.img_data["color_type"] = int(self.chunk_data[9])
-        self.img_data["compression_method"] = int(self.chunk_data[10])
-        self.img_data["filter_method"] = int(self.chunk_data[11])
-        self.img_data["interlace_method"] = int(self.chunk_data[12])
+        self.hdr_data["width"] = int.from_bytes(self.chunk_data[0:4], 'big')
+        self.hdr_data["height"] = int.from_bytes(self.chunk_data[4:8], 'big')
+        self.hdr_data["bit_depth"] = int(self.chunk_data[8])
+        self.hdr_data["color_type"] = int(self.chunk_data[9])
+        self.hdr_data["compression_method"] = int(self.chunk_data[10])
+        self.hdr_data["filter_method"] = int(self.chunk_data[11])
+        self.hdr_data["interlace_method"] = int(self.chunk_data[12])
         if not self.color_type_to_str():
             return False
+        if not self.check_bit_depth_by_color_type():
+            return False
 
-
-    def get_img_data(self) -> dict:
-        return self.img_data
+    def get_hdr_data(self) -> dict:
+        return self.hdr_data
 
     def color_type_to_str(self) -> bool:
-        color_num = self.img_data["color_type"]
+        """
+        Sets hdr_data["color_type_str"] based on the color_type int
+
+        Returns:
+        True if possible to give str name, False otherwise
+        """
+        color_num = self.hdr_data["color_type"]
         if color_num == 0:
-            self.img_data["color_type_str"] = "Greyscale"
+            self.hdr_data["color_type_str"] = "Greyscale"
         elif color_num == 2:
-            self.img_data["color_type_str"] = "Truecolour"
+            self.hdr_data["color_type_str"] = "Truecolour"
         elif color_num == 3:
-            self.img_data["color_type_str"] = "Indexed-colour"
+            self.hdr_data["color_type_str"] = "Indexed-colour"
         elif color_num == 4:
-            self.img_data["color_type_str"] = "Greyscale_with_alpha"
+            self.hdr_data["color_type_str"] = "Greyscale_with_alpha"
         elif color_num == 6:
-            self.img_data["color_type_str"] = "Truecolour_with_alpha"
+            self.hdr_data["color_type_str"] = "Truecolour_with_alpha"
         else:
             log.error(
                 "ERROR: Color code from IHDR is wrong and equals %d", color_num)
+            return False
+        return True
+
+    def check_bit_depth_by_color_type(self) -> bool:
+        color_num = self.hdr_data["color_type"]
+        b_d = self.hdr_data["bit_depth"]
+        if color_num == 0 and b_d in (1, 2, 4, 8, 16):
+            return True
+        elif color_num == 3 and b_d in (1, 2, 4, 8):
+            return True
+        elif color_num in (2, 4, 6) and b_d in (8, 16):
+            return True
+        else:
+            log.error(
+                "ERROR: Given bit depth (%d) is not allowed when color_type is %s (%d)", self.hdr_data["bit_depth"], self.hdr_data["color_type_str"], self.hdr_data["color_type"])
+            return False
+
+
+class PLTE(Chunk):
+    plte_data = []
+
+    def __init__(self) -> None:
+        pass
+
+    def process_plte_data(self) -> None:
+        if self.chunk_length % 3 != 0:
+            return False
+        for i in range(0, self.chunk_length, 3):
+            self.plte_data.append(
+                (self.chunk_data[i], self.chunk_data[i+1], self.chunk_data[i+2]))
+        log.info(
+            f"Printing the palette list of RGB tuples: {self.plte_data}, of length {len(self.plte_data)}")
+
+
+class IEND(Chunk):
+
+    def __init__(self) -> None:
+        pass
+
+    def process_iend_data(self) -> bool:
+        if self.chunk_length != 0:
+            log.error(
+                "ERROR: IEND should be of length 0, but its length is %d", self.chunk_length)
             return False
         return True

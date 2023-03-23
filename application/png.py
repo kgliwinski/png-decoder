@@ -31,7 +31,7 @@ class Png:
 
         self.signature = self.file_png.read(8)
 
-        log.debug("Read signature:\n %s", self.signature)
+        log.info("Read signature:\n %s", self.signature)
         return len(self.signature)
 
     def read_chunks(self):
@@ -42,8 +42,37 @@ class Png:
     def get_chunk_types(self) -> list:
         return [chunk.get_chunk_type() for chunk in self.chunks]
     
-    def process_header(self):
+    def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index("IHDR")
-        self.chunks[index].process_img_data()
-        log.debug(f"Printing IHDR dictionary: {self.chunks[index].get_img_data()}")
+        ret = self.chunks[index].process_hdr_data()
+        log.debug(f"Printing IHDR dictionary: {self.chunks[index].get_hdr_data()}")
+        if ret is False:
+            log.error("IHDR processing gone wrong!")
+            return False
+        else:
+            log.info("Header chunk processing OK")
+        return True
+    
+    def process_palette(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        index = chunk_types.index("PLTE")
+        ret = self.chunks[index].process_plte_data()
+        if ret is False:
+            log.error("PLTE processing gone wrong!")
+            return False
+        else:
+            log.info("Palette chunk processing OK")
+        return True
+    
+    def process_ending(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        index = chunk_types.index('IEND')
+        ret = self.chunks[index].process_iend_data()
+        if ret is False:
+            log.error("IEND processing gone wrong!")
+            return False
+        else:
+            log.info("Ending chunk processing OK")
+        return True
+

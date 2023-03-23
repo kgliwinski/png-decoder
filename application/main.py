@@ -15,3 +15,5 @@ img = cv.imread('cat.png')
 
 print(ex_png)
 ex_png.process_header()
+ex_png.process_palette()
+ex_png.process_ending()
