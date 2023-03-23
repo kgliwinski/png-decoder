@@ -29,6 +29,8 @@ class Chunk:
 
         self.read_length()
         self.read_chunk_type()
+        if (self.chunk_type == 'IHDR'):
+            self.__class__ = IHDR
         self.read_data()
         self.read_crc32()
 
@@ -84,8 +86,62 @@ class Chunk:
         """
         return self.chunk_length
 
-    def get_type(self) -> str:
+    def get_chunk_type(self) -> str:
         """
         Get chunk type :D
         """
         return self.chunk_type
+
+
+class IHDR(Chunk):
+    img_data = {
+        "width": int,
+        "height": int,
+        "bit_depth": int,
+        "color_type": int,
+        "color_type_str": str,
+        "compression_method": int,
+        "filter_method": int,
+        "interlace_method": int
+    }
+
+    def __init__(self) -> None:
+        pass
+
+    def process_img_data(self) -> bool:
+        """
+        Processes the image data from raw bytes to img_data values,
+        as well as determines decoded color_type, checks if given bit_depth
+        is allowed with this color_type
+        """
+        self.img_data["width"] = int.from_bytes(self.chunk_data[0:4], 'big')
+        self.img_data["height"] = int.from_bytes(self.chunk_data[4:8], 'big')
+        self.img_data["bit_depth"] = int(self.chunk_data[8])
+        self.img_data["color_type"] = int(self.chunk_data[9])
+        self.img_data["compression_method"] = int(self.chunk_data[10])
+        self.img_data["filter_method"] = int(self.chunk_data[11])
+        self.img_data["interlace_method"] = int(self.chunk_data[12])
+        if not self.color_type_to_str():
+            return False
+
+
+    def get_img_data(self) -> dict:
+        return self.img_data
+
+    def color_type_to_str(self) -> bool:
+        color_num = self.img_data["color_type"]
+        if color_num == 0:
+            self.img_data["color_type_str"] = "Greyscale"
+        elif color_num == 2:
+            self.img_data["color_type_str"] = "Truecolour"
+        elif color_num == 3:
+            self.img_data["color_type_str"] = "Indexed-colour"
+        elif color_num == 4:
+            self.img_data["color_type_str"] = "Greyscale_with_alpha"
+        elif color_num == 6:
+            self.img_data["color_type_str"] = "Truecolour_with_alpha"
+        else:
+            log.error(
+                "ERROR: Color code from IHDR is wrong and equals %d", color_num)
+            return False
+        return True

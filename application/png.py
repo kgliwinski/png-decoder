@@ -40,4 +40,10 @@ class Png:
             self.chunks.append(tmp)
 
     def get_chunk_types(self) -> list:
-        return [chunk.get_type() for chunk in self.chunks]
+        return [chunk.get_chunk_type() for chunk in self.chunks]
+    
+    def process_header(self):
+        chunk_types = self.get_chunk_types()
+        index = chunk_types.index("IHDR")
+        self.chunks[index].process_img_data()
+        log.debug(f"Printing IHDR dictionary: {self.chunks[index].get_img_data()}")
