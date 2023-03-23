@@ -14,7 +14,7 @@ def dictionary_len(my_dict: dict) -> int:
 
 class Png:
     signature = []
-    chunks = list(Chunk)
+    chunks = []
 
     def __init__(self, file_png_name: str):
         try:
@@ -30,58 +30,21 @@ class Png:
         return f"{len(self.signature)}"
 
     def get_signature(self) -> int:
-        byte = b'0x00'
-        while (byte := self.file_png.read(1)):
-            self.signature.append(byte)
-            if byte == b'\n':
-                break
+
+        self.signature = self.file_png.read(8)
+
         log.debug("Read signature:\n %s", self.signature)
         return len(self.signature)
 
     def get_header(self) -> int:
-        while (byte := self.file_png.read(1)):
-            self.header["length"].append(byte)
-            if byte == b'\n':
-                break
-        while (byte := self.file_png.read(1)):
-            self.header["type"].append(byte)
-            if byte == b'\n':
-                break
-        while (byte := self.file_png.read(1)):
-            self.header["data"].append(byte)
-            if byte == b'\n':
-                break
-        while (byte := self.file_png.read(1)):
-            self.header["crc32"].append(byte)
-            if byte == b'\n':
-                break
-        log.debug("Read header:\n %s", self.header)
-        return dictionary_len(self.header)
+        self.chunks.append(Chunk(self.file_png))
+        # log.debug("Read header:\n %s", self.header)
+        # return dictionary_len(self.header)
 
-    def get_data(self):
-        pass
-
-    def get_trailer(self) -> int:
-        while (byte := self.file_png.read(1)):
-            self.trailer["length"].append(byte)
-            if byte == b'\n':
+    def get_chunks(self):
+        while(self.file_png.peek() is not b''):
+            try:
+                self.chunks.append(Chunk(self.file_png))
+            except:
+                print("Everything was read")
                 break
-        while (byte := self.file_png.read(1)):
-            self.trailer["type"].append(byte)
-            if byte == b'\n':
-                break
-        while (byte := self.file_png.read(1)):
-            self.trailer["crc32"].append(byte)
-            if byte == b'\n':
-                break
-        log.debug("Read trailer:\n %s", self.trailer)
-        return dictionary_len(self.trailer)
-
-    def process_signature(self) -> str:
-        sign = ""
-        for i in self.signature[1:5]:
-            sign = sign + i.decode('ascii')
-        return sign
-
-    def process_header(self):
-        pass
