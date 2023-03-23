@@ -1,15 +1,9 @@
-import logging as log
-from chunk_class import *
-# import numpy as np
-
 """
 https://iter.ca/post/png/
-https://www.w3.org/TR/PNG-Chunks.html
+https://www.w3.org/TR/PNG-chunk.Chunks.html
 """
-
-
-def dictionary_len(my_dict: dict) -> int:
-    return sum([len(x) for x in my_dict.values()])
+import logging as log
+import chunk
 
 
 class Png:
@@ -37,14 +31,12 @@ class Png:
         return len(self.signature)
 
     def get_header(self) -> int:
-        self.chunks.append(Chunk(self.file_png))
-        # log.debug("Read header:\n %s", self.header)
-        # return dictionary_len(self.header)
+        self.chunks.append(chunk.Chunk(self.file_png))
 
     def get_chunks(self):
-        while(self.file_png.peek() is not b''):
+        while self.file_png.peek() is not b'':
             try:
-                self.chunks.append(Chunk(self.file_png))
+                self.chunks.append(chunk.Chunk(self.file_png))
             except:
                 print("Everything was read")
                 break
