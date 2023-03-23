@@ -19,7 +19,7 @@ class Chunk:
 
     def __init__(self, file_ptr) -> None:
         """
-        Initiates and gets all values for the class:
+        Initiates and reads all values for the class:
         - Chunk length (int)
         - Chunk type (str)
         - Chunk data (bytes)
@@ -27,12 +27,12 @@ class Chunk:
         """
         self.file_ptr = file_ptr
 
-        self.get_length()
-        self.get_chunk_type()
-        self.get_data()
-        self.get_crc32()
+        self.read_length()
+        self.read_chunk_type()
+        self.read_data()
+        self.read_crc32()
 
-    def get_length(self):
+    def read_length(self):
         """
         Gets the length of Chunk - first 4 bytes of chunk
         self.chunk_length is an int created from big-endian representation of
@@ -43,9 +43,9 @@ class Chunk:
 
         # log.debug(length)
         self.chunk_length = int.from_bytes(length, 'big', signed=False)
-        log.debug("Chunk length: %d" % self.chunk_length)
+        log.debug("Chunk length: %d", self.chunk_length)
 
-    def get_chunk_type(self):
+    def read_chunk_type(self):
         """
         Gets the type of chunk - str of 4 letters after chunk_length
         self.chunk_type is the decoding of the second 4 bytes to ascii
@@ -55,18 +55,18 @@ class Chunk:
         chunk_type = self.file_ptr.read(self.TYPE_FIELD_LEN)
         # log.debug(chunk_type)
         self.chunk_type = chunk_type.decode('ascii')
-        log.debug("Chunk type: %s" % self.chunk_type)
+        log.debug("Chunk type: %s", self.chunk_type)
 
-    def get_data(self):
+    def read_data(self):
         """
         Gets the data (chunk_length bytes after chunk_type), and stores
         it in the self.chunk_data list
         """
         data = self.file_ptr.read(self.chunk_length)
         self.chunk_data = data
-        log.debug("Chunk data: %s" % data)
+        log.debug("Chunk data: %s", data)
 
-    def get_crc32(self):
+    def read_crc32(self):
         """
         Gets the last 4 bytes of the chunk, which is the crc32
         self.crc32_value is the unsigned int as big endian 
@@ -76,4 +76,16 @@ class Chunk:
 
         # log.debug(crc32)
         self.crc32_value = int.from_bytes(crc32, 'big')
-        log.debug("Chunk crc32: %d" % self.crc32_value)
+        log.debug("Chunk crc32: %d", self.crc32_value)
+
+    def get_length(self) -> int:
+        """
+        Get chunk length :D
+        """
+        return self.chunk_length
+
+    def get_type(self) -> str:
+        """
+        Get chunk type :D
+        """
+        return self.chunk_type

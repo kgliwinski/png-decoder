@@ -7,6 +7,9 @@ import chunk
 
 
 class Png:
+    """
+    Contains the PNG file signature and chunkss
+    """
     signature = []
     chunks = []
 
@@ -14,29 +17,27 @@ class Png:
         try:
             self.file_png = open(file_png_name, 'rb')
         except:
-            print("Failed to open file %s" % file_png_name)
+            print("Failed to open file %s", file_png_name)
 
     def __del__(self):
         if not self.file_png.closed:
             self.file_png.close()
 
     def __str__(self) -> str:
-        return f"{len(self.signature)}"
+        # ret = [chunk.get_type() for chunk in self.chunks]
+        return f"{self.get_chunk_types()}"
 
-    def get_signature(self) -> int:
+    def read_signature(self) -> int:
 
         self.signature = self.file_png.read(8)
 
         log.debug("Read signature:\n %s", self.signature)
         return len(self.signature)
 
-    def get_header(self) -> int:
-        self.chunks.append(chunk.Chunk(self.file_png))
+    def read_chunks(self):
+        while self.file_png.peek() != b'':
+            tmp = chunk.Chunk(self.file_png)
+            self.chunks.append(tmp)
 
-    def get_chunks(self):
-        while self.file_png.peek() is not b'':
-            try:
-                self.chunks.append(chunk.Chunk(self.file_png))
-            except:
-                print("Everything was read")
-                break
+    def get_chunk_types(self) -> list:
+        return [chunk.get_type() for chunk in self.chunks]
