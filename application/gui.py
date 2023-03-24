@@ -1,9 +1,10 @@
 
 import cv2
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox
 from PyQt6.QtGui import QImage, QPixmap
-import PyQt6.QtCore
+from PyQt6 import QtCore
 import png
+from os import listdir
 
 
 class MainWindow(QMainWindow):
@@ -16,10 +17,20 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # Create widgets
-        self.png_input_label = QLabel("PNG input:")
-        self.png_input_field = QLineEdit()
+        self.png_input_label = QLabel("PNG path")
+        self.png_input_field = QComboBox(self)
+        self.png_input_field.setGeometry(QtCore.QRect(10, 10, 150, 30))
+        self.png_input_field.setEditable(True)
+        self.png_input_field.setPlaceholderText("Select PNG file or type path")
+        
+        # Populate dropdown list with options
+        for file in listdir('.'):
+            if file[-4:].casefold() == '.png'.casefold():
+                self.png_input_field.addItem(file)
+
         self.display_image_label = QLabel()
         self.display_image_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.display_image_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.width_label = QLabel("Width:")
         self.width_field = QLineEdit()
         self.width_field.setReadOnly(True)  # set field as editable
@@ -105,7 +116,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def display_image_and_hdr_data(self):
-        self.png_path = self.png_input_field.text()
+        self.png_path = self.png_input_field.currentText()
 
         # Load image with OpenCV
         image = cv2.imread(self.png_path)
@@ -117,14 +128,22 @@ class MainWindow(QMainWindow):
             bytes_per_channel = channel * (image.dtype.itemsize)
             qimage = QImage(image.data, width, height, bytes_per_channel * width, QImage.Format.Format_RGB888)
             pixmap = QPixmap.fromImage(qimage)
-            pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT, aspectRatioMode=PyQt6.QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+            pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT, aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
             self.display_image_label.setPixmap(pixmap)
+            self.load_image_values()
         else:
             self.display_image_label.setText("Unable to load image")
-        self.load_image_values()
+        
 
     def load_image_values(self):
-        self.png_type = png.Png(self.png_path)
+        try:
+            self.png_type = png.Png(self.png_path)
+            print(self.png_path)
+            self.png_input_label.setText("PNG path:")
+        except:
+            self.png_input_label.setText("PNG Path: Invalid file name!")
+            return
+
         hdr = self.png_type.get_header()
         self.update_fields_from_header(hdr)
 

@@ -1,6 +1,7 @@
 """
 https://iter.ca/post/png/
-https://www.w3.org/TR/PNG-chunk.Chunks.html
+https://www.w3.org/TR/png/
+https://www.nayuki.io/page/png-file-chunk-inspector
 """
 import logging as log
 import chunk
@@ -18,6 +19,7 @@ class Png:
             self.file_png = open(file_png_name, 'rb')
         except:
             print("Failed to open file %s", file_png_name)
+            raise Exception("File error")
         self.read_signature()
         self.read_chunks()
         self.process_header()
@@ -61,7 +63,11 @@ class Png:
     
     def process_palette(self) -> bool:
         chunk_types = self.get_chunk_types()
-        index = chunk_types.index("PLTE")
+        try:
+            index = chunk_types.index("PLTE")
+        except:
+            log.info("No PLTE section in this image!")
+            return False
         ret = self.chunks[index].process_plte_data()
         if ret is False:
             log.error("PLTE processing gone wrong!")
