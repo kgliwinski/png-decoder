@@ -48,19 +48,20 @@ class Png:
 
     def get_chunk_types(self) -> list:
         return [chunk.get_chunk_type() for chunk in self.chunks]
-    
+
     def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index("IHDR")
         ret = self.chunks[index].process_hdr_data()
-        log.debug(f"Printing IHDR dictionary: {self.chunks[index].get_hdr_data()}")
+        log.debug(
+            f"Printing IHDR dictionary: {self.chunks[index].get_hdr_data()}")
         if ret is False:
             log.error("IHDR processing gone wrong!")
             return False
         else:
             log.info("Header chunk processing OK")
         return True
-    
+
     def process_palette(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -75,7 +76,7 @@ class Png:
         else:
             log.info("Palette chunk processing OK")
         return True
-    
+
     def process_ending(self) -> bool:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index('IEND')
@@ -86,9 +87,36 @@ class Png:
         else:
             log.info("Ending chunk processing OK")
         return True
-    
+
+    def get_all_chunk_numbers(self) -> dict:
+        my_dict = {i: self.get_chunk_types().count(
+            i) for i in self.get_chunk_types()}
+        crit_chunks = ['IHDR', 'PLTE', 'IDAT', 'IEND']
+        for i in crit_chunks:
+            if i not in my_dict:
+                my_dict[i] = 0
+
+        return my_dict
+
+    def check_critical_chunk_numbers(self) -> bool:
+        chunk_num_dict = self.get_all_chunk_numbers()
+        if 'IHDR' not in chunk_num_dict or chunk_num_dict['IHDR'] != 1:
+            log.error(
+                "Wrong number of IHDR chunks in image: is %d, should be 1", chunk_num_dict['IHDR'])
+            return False
+        elif chunk_num_dict['IEND'] != 1:
+            log.error(
+                "Wrong number of IEND chunks in image: is %d, should be 1", chunk_num_dict['IEND'])
+            return False
+        elif chunk_num_dict['IDAT'] <= 0:
+            log.error(
+                "Wrong number of IDAT chunks in image: is %d, should be at least 1", chunk_num_dict['IDAT'])
+            return False
+        elif 'PLTE' in chunk_num_dict and chunk_num_dict['PLTE'] > 1:
+            return False
+        return True
+
     def get_header(self) -> chunk:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index("IHDR")
         return self.chunks[index]
-
