@@ -18,6 +18,11 @@ class Png:
             self.file_png = open(file_png_name, 'rb')
         except:
             print("Failed to open file %s", file_png_name)
+        self.read_signature()
+        self.read_chunks()
+        self.process_header()
+        self.process_palette()
+        self.process_ending()
 
     def __del__(self):
         if not self.file_png.closed:
@@ -75,4 +80,9 @@ class Png:
         else:
             log.info("Ending chunk processing OK")
         return True
+    
+    def get_header(self) -> chunk:
+        chunk_types = self.get_chunk_types()
+        index = chunk_types.index("IHDR")
+        return self.chunks[index]
 
