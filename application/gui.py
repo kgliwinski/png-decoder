@@ -3,7 +3,8 @@ import cv2
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
-import png
+import png_class as png
+from chunk_class import IHDR
 from os import listdir
 
 
@@ -12,6 +13,7 @@ class MainWindow(QMainWindow):
     IMG_HEIGHT = 400
     IMG_WIDTH = 600
 
+    png_type : png = None
     
     def __init__(self):
         super().__init__()
@@ -117,12 +119,14 @@ class MainWindow(QMainWindow):
 
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
-
+        print(self.png_path)
         # Load image with OpenCV
         image = cv2.imread(self.png_path)
 
         # Display image
         if image is not None:
+            if self.png_type is not None:
+                self.png_type = None
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             height, width, channel = image.shape
             bytes_per_channel = channel * (image.dtype.itemsize)
@@ -138,16 +142,17 @@ class MainWindow(QMainWindow):
     def load_image_values(self):
         try:
             self.png_type = png.Png(self.png_path)
-            print(self.png_path)
+            print(self.png_type)
             self.png_input_label.setText("PNG path:")
+            hdr = self.png_type.get_header()
+            self.update_fields_from_header(hdr)
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
-            return
+            pass
 
-        hdr = self.png_type.get_header()
-        self.update_fields_from_header(hdr)
+        
 
-    def update_fields_from_header(self, hdr):
+    def update_fields_from_header(self, hdr : IHDR):
         data = hdr.get_hdr_data()
         self.width_field.setText(str(data["width"]))
         self.height_field.setText(str(data["height"]))

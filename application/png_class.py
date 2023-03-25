@@ -4,15 +4,14 @@ https://www.w3.org/TR/png/
 https://www.nayuki.io/page/png-file-chunk-inspector
 """
 import logging as log
-import chunk
+import chunk_class as chunk
 
 
 class Png:
     """
     Contains the PNG file signature and chunkss
     """
-    signature = []
-    chunks = []
+    
 
     def __init__(self, file_png_name: str):
         try:
@@ -20,11 +19,14 @@ class Png:
         except:
             print("Failed to open file %s", file_png_name)
             raise Exception("File error")
+        self.signature = []
+        self.chunks = []
         self.read_signature()
         self.read_chunks()
         self.process_header()
         self.process_palette()
         self.process_ending()
+        
 
     def __del__(self):
         if not self.file_png.closed:
