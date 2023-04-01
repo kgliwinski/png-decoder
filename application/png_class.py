@@ -118,7 +118,16 @@ class Png:
             return False
         return True
 
-    def get_header(self) -> chunk:
+    def get_header(self) -> chunk or None:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index("IHDR")
+        return self.chunks[index]
+    
+    def get_plte(self) -> chunk:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index("PLTE")
+        except:
+            log.info("No PLTE section in this image!")
+            return None
         return self.chunks[index]

@@ -1,6 +1,6 @@
 
 import cv2
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget, QPlainTextEdit
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
 import png_class as png
@@ -28,10 +28,7 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.tab2, "PLTE")
 
         self.create_ihdr_tab()
-
-        # Create widgets for Tab 2
-        self.empty_label = QLabel("This is an empty tab.", self.tab2)
-        self.empty_label.setGeometry(10, 10, 280, 30)
+        self.create_plte_tab()
 
     def create_ihdr_tab(self):
         # Create widgets
@@ -52,26 +49,26 @@ class MainWindow(QMainWindow):
             QtCore.Qt.AlignmentFlag.AlignCenter)
         self.width_label = QLabel("Width:")
         self.width_field = QLineEdit(self.tab1)
-        self.width_field.setReadOnly(True)  # set field as editable
+        self.width_field.setReadOnly(True)
         self.height_label = QLabel("Height:")
         self.height_field = QLineEdit(self.tab1)
-        self.height_field.setReadOnly(True)  # set field as editable
+        self.height_field.setReadOnly(True)
         self.bit_depth_label = QLabel("Bit depth:")
         self.bit_depth_field = QLineEdit(self.tab1)
-        self.bit_depth_field.setReadOnly(True)  # set field as editable
+        self.bit_depth_field.setReadOnly(True)
         self.color_type_label = QLabel("Color type:")
         self.color_type_field = QLineEdit(self.tab1)
-        self.color_type_field.setReadOnly(True)  # set field as editable
+        self.color_type_field.setReadOnly(True)
         self.compression_method_label = QLabel("Compression method:")
         self.compression_method_field = QLineEdit(self.tab1)
         self.compression_method_field.setReadOnly(
-            True)  # set field as editable
+            True)
         self.filter_method_label = QLabel("Filter method:")
         self.filter_method_field = QLineEdit(self.tab1)
-        self.filter_method_field.setReadOnly(True)  # set field as editable
+        self.filter_method_field.setReadOnly(True)
         self.interlace_method_label = QLabel("Interlace method:")
         self.interlace_method_field = QLineEdit(self.tab1)
-        self.interlace_method_field.setReadOnly(True)  # set field as editable
+        self.interlace_method_field.setReadOnly(True)
         self.submit_button = QPushButton("Submit")
 
         # Create layout for the first column
@@ -133,7 +130,22 @@ class MainWindow(QMainWindow):
         self.tab1.setLayout(tab1_layout)
 
     def create_plte_tab(self):
-        pass
+        self.palette_size_label = QLabel("Palette size:")
+        self.palette_size_field = QLineEdit(self.tab2)
+        self.palette_size_field.setReadOnly(True)
+        self.palette_data_label = QLabel("Palette data:")
+        self.palette_data_field = QPlainTextEdit(self.tab2)
+        self.palette_data_field.lineWrapMode()
+        self.palette_data_field.setReadOnly(True)
+
+        tab2_layout = QVBoxLayout()
+        tab2_layout.addWidget(self.palette_size_label)
+        tab2_layout.addWidget(self.palette_size_field)
+        tab2_layout.addWidget(self.palette_data_label)
+        tab2_layout.addWidget(self.palette_data_field)
+        tab2_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+
+        self.tab2.setLayout(tab2_layout)
 
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
@@ -165,6 +177,12 @@ class MainWindow(QMainWindow):
             self.png_input_label.setText("PNG path:")
             hdr = self.png_type.get_header()
             self.update_fields_from_header(hdr)
+            plte = self.png_type.get_plte()
+            if plte is not None:
+                self.update_fields_from_plte(plte)
+            else:
+                self.palette_size_field.setText("PLTE chunk not found")
+                self.palette_data_field.setPlainText("None")
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
             pass
@@ -178,7 +196,12 @@ class MainWindow(QMainWindow):
         self.compression_method_field.setText(str(data["compression_method"]))
         self.filter_method_field.setText(str(data["filter_method"]))
         self.interlace_method_field.setText(str(data["interlace_method"]))
-    
+
     def update_fields_from_plte(self, plte: PLTE):
         data = plte.get_plte_data()
-        self.palette_size_field.setText(str(data["palette_size"]))
+        self.palette_size_field.setText(str(len(data)))
+        palette_data = ''
+        for dat in data:
+            palette_data += str(dat) + '\n'
+
+        self.palette_data_field.insertPlainText(str(palette_data))
