@@ -5,8 +5,8 @@ from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
 import png_class as png
 from chunk_class import IHDR
-from os import listdir
-
+import glob
+# from os import listdir
 
 class MainWindow(QMainWindow):
     
@@ -26,9 +26,9 @@ class MainWindow(QMainWindow):
         self.png_input_field.setPlaceholderText("Select PNG file or type path")
         
         # Populate dropdown list with options
-        for file in listdir('.'):
-            if file[-4:].casefold() == '.png'.casefold():
-                self.png_input_field.addItem(file)
+        for file in glob.iglob('**/*.png', recursive=True):
+            # if file[-4:].casefold() == '.png'.casefold():
+            self.png_input_field.addItem(file)
 
         self.display_image_label = QLabel()
         self.display_image_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
