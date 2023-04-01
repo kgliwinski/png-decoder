@@ -186,6 +186,9 @@ class PLTE(Chunk):
                 (self.chunk_data[i], self.chunk_data[i+1], self.chunk_data[i+2]))
         log.info(
             f"Printing the palette list of RGB tuples: {self.plte_data}, of length {len(self.plte_data)}")
+        
+    def get_plte_data(self) -> list:
+        return self.plte_data
 
 
 class IEND(Chunk):

@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushB
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
 import png_class as png
-from chunk_class import IHDR
+from chunk_class import IHDR, PLTE
 import glob
 # from os import listdir
 
@@ -24,9 +24,16 @@ class MainWindow(QMainWindow):
         self.tab1 = QWidget()
         self.tab2 = QWidget()
 
-        self.tab_widget.addTab(self.tab1, "Tab 1")
-        self.tab_widget.addTab(self.tab2, "Tab 2")
+        self.tab_widget.addTab(self.tab1, "IHDR and image")
+        self.tab_widget.addTab(self.tab2, "PLTE")
 
+        self.create_ihdr_tab()
+
+        # Create widgets for Tab 2
+        self.empty_label = QLabel("This is an empty tab.", self.tab2)
+        self.empty_label.setGeometry(10, 10, 280, 30)
+
+    def create_ihdr_tab(self):
         # Create widgets
         self.png_input_label = QLabel("PNG path")
         self.png_input_field = QComboBox(self.tab1)
@@ -123,12 +130,10 @@ class MainWindow(QMainWindow):
         tab1_layout.addWidget(self.display_image_label)
 
         # Set main layout
-
         self.tab1.setLayout(tab1_layout)
-        
-        # Create widgets for Tab 2
-        self.empty_label = QLabel("This is an empty tab.", self.tab2)
-        self.empty_label.setGeometry(10, 10, 280, 30)
+
+    def create_plte_tab(self):
+        pass
 
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
@@ -173,3 +178,7 @@ class MainWindow(QMainWindow):
         self.compression_method_field.setText(str(data["compression_method"]))
         self.filter_method_field.setText(str(data["filter_method"]))
         self.interlace_method_field.setText(str(data["interlace_method"]))
+    
+    def update_fields_from_plte(self, plte: PLTE):
+        data = plte.get_plte_data()
+        self.palette_size_field.setText(str(data["palette_size"]))
