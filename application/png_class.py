@@ -91,6 +91,51 @@ class Png:
         else:
             log.info("Ending chunk processing OK")
         return True
+    
+    def process_gama(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('gAMA')
+        except:
+            log.info("No gAMA section in this image!")
+            return False
+        ret = self.chunks[index].process_gama_data()
+        if ret is False:
+            log.error("gAMA processing gone wrong!")
+            return False
+        else:
+            log.info("gAMA chunk processing OK")
+        return True
+    
+    def process_chrm(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('cHRM')
+        except:
+            log.info("No cHRM section in this image!")
+            return False
+        ret = self.chunks[index].process_chrm_data()
+        if ret is False:
+            log.error("cHRM processing gone wrong!")
+            return False
+        else:
+            log.info("cHRM chunk processing OK")
+        return True
+    
+    def process_bkgd(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('bKGD')
+        except:
+            log.info("No bKGD section in this image!")
+            return False
+        ret = self.chunks[index].process_bkgd_data()
+        if ret is False:
+            log.error("bKGD processing gone wrong!")
+            return False
+        else:
+            log.info("bKGD chunk processing OK")
+        return True
 
     def get_all_chunk_numbers(self) -> dict:
         my_dict = {i: self.get_chunk_types().count(
@@ -172,6 +217,6 @@ class Png:
             fourier_inverted, dtype=np.uint8), cmap='gray')
         plt.title('Inverted Image'), plt.xticks([]), plt.yticks([])
         if save:
-            plt.savefig(tmp_name + "_inverted.png", dpi = 2000)
+            plt.savefig(tmp_name + "_inverted.png", dpi = 200)
 
         return (tmp_name + "_spectrum.png", tmp_name + "_inverted.png")

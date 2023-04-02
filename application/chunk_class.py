@@ -3,7 +3,7 @@ Contains the chunk class as well as child classes for
 several "special" chunks
 """
 import logging as log
-
+from typing import List, Dict, Tuple, Union
 
 class Chunk:
     """
@@ -186,7 +186,7 @@ class PLTE(Chunk):
                 (self.chunk_data[i], self.chunk_data[i+1], self.chunk_data[i+2]))
         log.info(
             f"Printing the palette list of RGB tuples: {self.plte_data}, of length {len(self.plte_data)}")
-        
+
     def get_plte_data(self) -> list:
         return self.plte_data
 
@@ -202,3 +202,78 @@ class IEND(Chunk):
                 "ERROR: IEND should be of length 0, but its length is %d", self.chunk_length)
             return False
         return True
+
+
+class gAMA(Chunk):
+    def __init__(self) -> None:
+        pass
+
+    def process_gama_data(self) -> bool:
+        if self.chunk_length != 4:
+            log.error(
+                "ERROR: gAMA should be of length 4, but its length is %d", self.chunk_length)
+            return False
+        self.gamma = float(int.from_bytes(self.chunk_data, 'big')) / 100000
+        log.info(f"Gamma value: {self.gamma}")
+        return True
+
+    def get_gamma(self) -> float:
+        return self.gamma
+
+
+class cHRM(Chunk):
+    def __init__(self) -> None:
+        pass
+
+    def process_chrm_data(self) -> bool:
+        if self.chunk_length != 32:
+            log.error(
+                "ERROR: cHRM should be of length 32, but its length is %d", self.chunk_length)
+            return False
+        self.white_point_x = float(int.from_bytes(
+            self.chunk_data[0:4], 'big')) / 100000
+        self.white_point_y = float(int.from_bytes(
+            self.chunk_data[4:8], 'big')) / 100000
+        self.red_x = float(int.from_bytes(
+            self.chunk_data[8:12], 'big')) / 100000
+        self.red_y = float(int.from_bytes(
+            self.chunk_data[12:16], 'big')) / 100000
+        self.green_x = float(int.from_bytes(
+            self.chunk_data[16:20], 'big')) / 100000
+        self.green_y = float(int.from_bytes(
+            self.chunk_data[20:24], 'big')) / 100000
+        self.blue_x = float(int.from_bytes(
+            self.chunk_data[24:28], 'big')) / 100000
+        self.blue_y = float(int.from_bytes(
+            self.chunk_data[28:32], 'big')) / 100000
+        log.info(
+            f"White point x: {self.white_point_x}, y: {self.white_point_y}")
+        log.info(f"Red x: {self.red_x}, y: {self.red_y}")
+        log.info(f"Green x: {self.green_x}, y: {self.green_y}")
+        log.info(f"Blue x: {self.blue_x}, y: {self.blue_y}")
+        return True
+
+    def get_chrm_data(self) -> dict:
+        return {"white_point_x": self.white_point_x, "white_point_y": self.white_point_y, "red_x": self.red_x, "red_y": self.red_y, "green_x": self.green_x, "green_y": self.green_y, "blue_x": self.blue_x, "blue_y": self.blue_y}
+
+class bKGD(Chunk):
+    def __init__(self) -> None:
+        pass
+
+    def process_bkgd_data(self) -> bool:
+        if self.chunk_length not in (2, 6):
+            log.error(
+                "ERROR: bKGD should be of length 2 or 6, but its length is %d", self.chunk_length)
+            return False
+        if self.chunk_length == 2:
+            self.background = int.from_bytes(self.chunk_data, 'big')
+            log.info(f"Background color: {self.background}")
+        else:
+            self.background = (int.from_bytes(self.chunk_data[0:2], 'big'),
+                               int.from_bytes(self.chunk_data[2:4], 'big'),
+                               int.from_bytes(self.chunk_data[4:6], 'big'))
+            log.info(f"Background color: {self.background}")
+        return True
+    
+    def get_bkgd_data(self) -> Union[int, tuple]:
+        return self.background

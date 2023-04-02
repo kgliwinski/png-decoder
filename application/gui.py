@@ -26,14 +26,17 @@ class MainWindow(QMainWindow):
         self.tab1 = QWidget()
         self.tab2 = QWidget()
         self.tab3 = QWidget()
+        self.tab4 = QWidget()
 
         self.tab_widget.addTab(self.tab1, "IHDR and image")
         self.tab_widget.addTab(self.tab2, "PLTE")
         self.tab_widget.addTab(self.tab3, "FFT")
+        self.tab_widget.addTab(self.tab4, "Ancilliary chunks")
 
         self.create_ihdr_tab()
         self.create_plte_tab()
         self.create_fft_tab()
+        self.create_ancilliary_chunks_tab()
 
     def create_ihdr_tab(self):
         # Create widgets
@@ -169,6 +172,31 @@ class MainWindow(QMainWindow):
         tab3_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         self.tab3.setLayout(tab3_layout)
+
+    def create_ancilliary_chunks_tab(self):
+        self.gama_label = QLabel("gAMA:")
+        self.gama_field = QPlainTextEdit(self.tab4)
+        self.gama_field.setReadOnly(True)
+
+        self.chrm_label = QLabel("cHRM:")
+        self.chrm_field = QPlainTextEdit(self.tab4)
+        self.chrm_field.setReadOnly(True)
+
+        self.srgb_label = QLabel("bKGD:")
+        self.srgb_field = QPlainTextEdit(self.tab4)
+        self.srgb_field.setReadOnly(True)
+
+
+        tab4_layout = QVBoxLayout()
+        tab4_layout.addWidget(self.gama_label)
+        tab4_layout.addWidget(self.gama_field)
+        tab4_layout.addWidget(self.chrm_label)
+        tab4_layout.addWidget(self.chrm_field)
+        tab4_layout.addWidget(self.srgb_label)
+        tab4_layout.addWidget(self.srgb_field)
+        tab4_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+
+        self.tab4.setLayout(tab4_layout)
 
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
