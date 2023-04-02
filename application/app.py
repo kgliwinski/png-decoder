@@ -3,6 +3,7 @@ import png_class as png
 # import cv2 as cv
 import gui
 from PyQt6.QtWidgets import QApplication, QTabWidget
+from matplotlib.backends.backend_qt import FigureCanvasQT as FigureCanvas, QtCore, QtWidgets
 import sys
 
 if __name__ == '__main__':
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     # print(ex_png)
     # print(ex_png.get_all_chunk_numbers())
     # print(ex_png.check_critical_chunk_numbers())
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     main_window = gui.MainWindow()
     main_window.tab_widget.setTabPosition(QTabWidget.TabPosition.North)
     main_window.show()

@@ -1,11 +1,13 @@
 
-import cv2
+import cv2 as cv
 from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget, QPlainTextEdit
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
 import png_class as png
 from chunk_class import IHDR, PLTE
 import glob
+from matplotlib.backends.backend_qt import FigureCanvasQT as FigureCanvas
+import matplotlib.pyplot as plt
 # from os import listdir
 
 
@@ -23,12 +25,15 @@ class MainWindow(QMainWindow):
 
         self.tab1 = QWidget()
         self.tab2 = QWidget()
+        self.tab3 = QWidget()
 
         self.tab_widget.addTab(self.tab1, "IHDR and image")
         self.tab_widget.addTab(self.tab2, "PLTE")
+        self.tab_widget.addTab(self.tab3, "FFT")
 
         self.create_ihdr_tab()
         self.create_plte_tab()
+        self.create_fft_tab()
 
     def create_ihdr_tab(self):
         # Create widgets
@@ -147,17 +152,35 @@ class MainWindow(QMainWindow):
 
         self.tab2.setLayout(tab2_layout)
 
+    def create_fft_tab(self):
+        self.fft_spectrum_label = QLabel("FFT spectrum:")
+        self.fft_spectrum_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.fft_spectrum_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop)
+
+        self.fft_inverted_label = QLabel("FFT inverted:")
+        self.fft_inverted_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.fft_inverted_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop)
+
+        tab3_layout = QVBoxLayout()
+        tab3_layout.addWidget(self.fft_spectrum_label)
+        tab3_layout.addWidget(self.fft_inverted_label)
+        tab3_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.tab3.setLayout(tab3_layout)
+
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
         print(self.png_path)
         # Load image with OpenCV
-        image = cv2.imread(self.png_path)
+        image = cv.imread(self.png_path)
 
         # Display image
         if image is not None:
             if self.png_type is not None:
                 self.png_type = None
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
             height, width, channel = image.shape
             bytes_per_channel = channel * (image.dtype.itemsize)
             qimage = QImage(image.data, width, height,
@@ -183,6 +206,7 @@ class MainWindow(QMainWindow):
             else:
                 self.palette_size_field.setText("PLTE chunk not found")
                 self.palette_data_field.setPlainText("None")
+            self.update_fourier_transform()
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
             pass
@@ -205,3 +229,25 @@ class MainWindow(QMainWindow):
             palette_data += str(dat) + '\n'
 
         self.palette_data_field.insertPlainText(str(palette_data))
+
+    def update_fourier_transform(self):
+        print(self.png_type)
+        f1, f2 = self.png_type.get_fourier_transform(save=True)
+        f1_img = cv.imread(f1)
+        height, width, channel = f1_img.shape
+        bytes_per_channel = channel * (f1_img.dtype.itemsize)
+        qimage = QImage(f1_img.data, width, height,
+                        bytes_per_channel * width, QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_spectrum_label.setPixmap(pixmap)
+        f2_img = cv.imread(f2)
+        height, width, channel = f2_img.shape
+        bytes_per_channel = channel * (f2_img.dtype.itemsize)
+        qimage = QImage(f2_img.data, width, height,
+                        bytes_per_channel * width, QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_inverted_label.setPixmap(pixmap)

@@ -5,19 +5,22 @@ https://www.nayuki.io/page/png-file-chunk-inspector
 """
 import logging as log
 import chunk_class as chunk
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2 as cv
 
 
 class Png:
     """
     Contains the PNG file signature and chunkss
     """
-    
 
     def __init__(self, file_png_name: str):
+        self.file_png_name = file_png_name
         try:
             self.file_png = open(file_png_name, 'rb')
         except:
-            print("Failed to open file %s", file_png_name)
+            log.error("Failed to open file %s", file_png_name)
             raise Exception("File error")
         self.signature = []
         self.chunks = []
@@ -26,7 +29,6 @@ class Png:
         self.process_header()
         self.process_palette()
         self.process_ending()
-        
 
     def __del__(self):
         if not self.file_png.closed:
@@ -122,7 +124,7 @@ class Png:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index("IHDR")
         return self.chunks[index]
-    
+
     def get_plte(self) -> chunk:
         chunk_types = self.get_chunk_types()
         try:
@@ -131,3 +133,45 @@ class Png:
             log.info("No PLTE section in this image!")
             return None
         return self.chunks[index]
+
+    def get_fourier_transform(self, tmp_name: str = ".tmp/temp", save: bool = False):
+        """ Print FFT of an image (shows magnitude and phase)
+            Compare original image and inverted fft of original image (checks transformation)
+        """
+        img = cv.imread(self.file_png_name, 0)
+        fourier = np.fft.fft2(img)
+        fourier_shifted = np.fft.fftshift(fourier)
+
+        fourier_mag = np.asarray(
+            20*np.log10(np.abs(fourier_shifted)), dtype=np.uint8)
+        fourier_phase = np.asarray(np.angle(fourier_shifted), dtype=np.uint8)
+
+        plt.rcParams['figure.figsize'] = [4,3]
+        plt.rcParams['figure.dpi'] = 200
+
+        f1 = plt.figure(1)  # show source image and FFT
+        plt.subplot(131), plt.imshow(img, cmap='gray')
+
+        plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+
+        plt.subplot(132), plt.imshow(fourier_mag, cmap='gray')
+        plt.title('FFT Magnitude'), plt.xticks([]), plt.yticks([])
+
+        plt.subplot(133), plt.imshow(fourier_phase, cmap='gray')
+        plt.title('FFT Phase'), plt.xticks([]), plt.yticks([])
+        
+        if save:
+            plt.savefig(tmp_name + "_spectrum.png", dpi = 2000)
+        
+        f2 = plt.figure(2)  # comapare source image and inverted fft
+        fourier_inverted = np.fft.ifft2(fourier)
+
+        plt.subplot(121), plt.imshow(img, cmap='gray')
+        plt.title('Input Image'), plt.xticks([]), plt.yticks([])
+        plt.subplot(122), plt.imshow(np.asarray(
+            fourier_inverted, dtype=np.uint8), cmap='gray')
+        plt.title('Inverted Image'), plt.xticks([]), plt.yticks([])
+        if save:
+            plt.savefig(tmp_name + "_inverted.png", dpi = 2000)
+
+        return (tmp_name + "_spectrum.png", tmp_name + "_inverted.png")
