@@ -184,10 +184,25 @@ class MainWindow(QMainWindow):
         self.fft_phase_label.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
-        self.fft_inverted_label = QLabel("FFT inverted:")
-        self.fft_inverted_label.setFixedSize(
+        self.fft_original_image_inverted_label = QLabel(
+            "Original image inverted:")
+        self.fft_original_image_inverted_label.setFixedSize(
             self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
-        self.fft_inverted_label.setAlignment(
+        self.fft_original_image_inverted_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        # fft as above for the inverted image
+        self.fft_inverted_spectrum_label = QLabel(
+            "FFT spectrum inverted:")
+        self.fft_inverted_spectrum_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+        self.fft_inverted_spectrum_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.fft_inverted_phase_label = QLabel("FFT phase inverted:")
+        self.fft_inverted_phase_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+        self.fft_inverted_phase_label.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         # create two horizontal layouts
@@ -199,8 +214,12 @@ class MainWindow(QMainWindow):
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         self.line_two = QHBoxLayout()
-        self.line_two.addWidget(self.fft_inverted_label)
-
+        self.line_two.addWidget(self.fft_original_image_inverted_label)
+        self.line_two.addWidget(self.fft_inverted_spectrum_label)
+        self.line_two.addWidget(self.fft_inverted_phase_label)
+        self.line_two.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+        
         tab3_layout = QVBoxLayout()
         tab3_layout.addLayout(self.line_one)
         tab3_layout.addLayout(self.line_two)
@@ -329,3 +348,42 @@ class MainWindow(QMainWindow):
         pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.fft_phase_label.setPixmap(pixmap)
+
+        # invert the image colors in opencv
+        img = cv.bitwise_not(img)
+        pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
+                                          QImage.Format.Format_Grayscale8))
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_original_image_inverted_label.setPixmap(pixmap)
+
+        # magnitude of the inverted image
+        f = np.fft.fft2(img)
+        fshift = np.fft.fftshift(f)
+        magnitude_spectrum = 20*np.log(np.abs(fshift))
+        magnitude_spectrum = np.uint8(magnitude_spectrum)
+        magnitude_spectrum = cv.cvtColor(magnitude_spectrum, cv.COLOR_GRAY2RGB)
+        height, width, channel = magnitude_spectrum.shape
+        bytes_per_channel = channel * (magnitude_spectrum.dtype.itemsize)
+        qimage = QImage(magnitude_spectrum.data, width, height,
+                        bytes_per_channel * width, QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                                 aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_inverted_spectrum_label.setPixmap(pixmap)
+
+        # phase of the inverted image
+        phase_spectrum = np.angle(fshift)
+        phase_spectrum = np.uint8(phase_spectrum)
+        phase_spectrum = cv.cvtColor(phase_spectrum, cv.COLOR_GRAY2RGB)
+        height, width, channel = phase_spectrum.shape
+        bytes_per_channel = channel * (phase_spectrum.dtype.itemsize)
+        qimage = QImage(phase_spectrum.data, width, height,
+                        bytes_per_channel * width, QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                                 aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_inverted_phase_label.setPixmap(pixmap)
+        
+
+
