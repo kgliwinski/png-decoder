@@ -1,6 +1,6 @@
 
 import cv2 as cv
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget, QPlainTextEdit
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget, QPlainTextEdit, QScrollArea
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
 import png_class as png
@@ -8,13 +8,15 @@ from chunk_class import IHDR, PLTE
 import glob
 from matplotlib.backends.backend_qt import FigureCanvasQT as FigureCanvas
 import matplotlib.pyplot as plt
+import numpy as np
 # from os import listdir
 
 
 class MainWindow(QMainWindow):
 
     IMG_HEIGHT = 400
-    IMG_WIDTH = 600
+    IMG_WIDTH = 800
+    GRAPH_WIDTH_AND_HEIGHT = 400
 
     png_type: png = None
 
@@ -33,10 +35,14 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.tab3, "FFT")
         self.tab_widget.addTab(self.tab4, "Ancilliary chunks")
 
+        self.tab_widget.setTabBarAutoHide(True)
+
         self.create_ihdr_tab()
         self.create_plte_tab()
         self.create_fft_tab()
         self.create_ancilliary_chunks_tab()
+
+        self.showMaximized()
 
     def create_ihdr_tab(self):
         # Create widgets
@@ -51,8 +57,7 @@ class MainWindow(QMainWindow):
             # if file[-4:].casefold() == '.png'.casefold():
             self.png_input_field.addItem(file)
 
-        self.display_image_label = QLabel()
-        self.display_image_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.display_image_label = QLabel("Image preview")
         self.display_image_label.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignCenter)
         self.width_label = QLabel("Width:")
@@ -133,6 +138,8 @@ class MainWindow(QMainWindow):
         tab1_layout.addLayout(ihdr_layout)
         tab1_layout.addWidget(self.submit_button)
         tab1_layout.addWidget(self.display_image_label)
+        tab1_layout.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignLeft)
 
         # Set main layout
         self.tab1.setLayout(tab1_layout)
@@ -156,20 +163,49 @@ class MainWindow(QMainWindow):
         self.tab2.setLayout(tab2_layout)
 
     def create_fft_tab(self):
+        self.fft_original_image_darkscale_label = QLabel(
+            "Original image darkscale:")
+        # make it width size but height is dynamic
+        self.fft_original_image_darkscale_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+
+        self.fft_original_image_darkscale_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
         self.fft_spectrum_label = QLabel("FFT spectrum:")
-        self.fft_spectrum_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.fft_spectrum_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
         self.fft_spectrum_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop)
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.fft_phase_label = QLabel("FFT phase:")
+        self.fft_phase_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+        self.fft_phase_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         self.fft_inverted_label = QLabel("FFT inverted:")
-        self.fft_inverted_label.setFixedSize(self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.fft_inverted_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
         self.fft_inverted_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop)
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        # create two horizontal layouts
+        self.line_one = QHBoxLayout()
+        self.line_one.addWidget(self.fft_original_image_darkscale_label)
+        self.line_one.addWidget(self.fft_spectrum_label)
+        self.line_one.addWidget(self.fft_phase_label)
+        self.line_one.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.line_two = QHBoxLayout()
+        self.line_two.addWidget(self.fft_inverted_label)
 
         tab3_layout = QVBoxLayout()
-        tab3_layout.addWidget(self.fft_spectrum_label)
-        tab3_layout.addWidget(self.fft_inverted_label)
-        tab3_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        tab3_layout.addLayout(self.line_one)
+        tab3_layout.addLayout(self.line_two)
+        tab3_layout.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         self.tab3.setLayout(tab3_layout)
 
@@ -185,7 +221,6 @@ class MainWindow(QMainWindow):
         self.srgb_label = QLabel("bKGD:")
         self.srgb_field = QPlainTextEdit(self.tab4)
         self.srgb_field.setReadOnly(True)
-
 
         tab4_layout = QVBoxLayout()
         tab4_layout.addWidget(self.gama_label)
@@ -217,6 +252,8 @@ class MainWindow(QMainWindow):
             pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT,
                                    aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
             self.display_image_label.setPixmap(pixmap)
+            self.display_image_label.setAlignment(
+                QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
             self.load_image_values()
         else:
             self.display_image_label.setText("Unable to load image")
@@ -259,23 +296,36 @@ class MainWindow(QMainWindow):
         self.palette_data_field.insertPlainText(str(palette_data))
 
     def update_fourier_transform(self):
-        print(self.png_type)
-        f1, f2 = self.png_type.get_fourier_transform(save=True)
-        f1_img = cv.imread(f1)
-        height, width, channel = f1_img.shape
-        bytes_per_channel = channel * (f1_img.dtype.itemsize)
-        qimage = QImage(f1_img.data, width, height,
+        # plot a phase and magnintude spectrum using pyqtgraph
+        img = cv.imread(self.png_path, cv.IMREAD_GRAYSCALE)
+        pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
+                                          QImage.Format.Format_Grayscale8))
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_original_image_darkscale_label.setPixmap(pixmap)
+
+        f = np.fft.fft2(img)
+        fshift = np.fft.fftshift(f)
+        magnitude_spectrum = 20*np.log(np.abs(fshift))
+        magnitude_spectrum = np.uint8(magnitude_spectrum)
+        magnitude_spectrum = cv.cvtColor(magnitude_spectrum, cv.COLOR_GRAY2RGB)
+        height, width, channel = magnitude_spectrum.shape
+        bytes_per_channel = channel * (magnitude_spectrum.dtype.itemsize)
+        qimage = QImage(magnitude_spectrum.data, width, height,
                         bytes_per_channel * width, QImage.Format.Format_RGB888)
         pixmap = QPixmap.fromImage(qimage)
-        pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT,
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.fft_spectrum_label.setPixmap(pixmap)
-        f2_img = cv.imread(f2)
-        height, width, channel = f2_img.shape
-        bytes_per_channel = channel * (f2_img.dtype.itemsize)
-        qimage = QImage(f2_img.data, width, height,
+        # now plot the phase spectrum
+        phase_spectrum = np.angle(fshift)
+        phase_spectrum = np.uint8(phase_spectrum)
+        phase_spectrum = cv.cvtColor(phase_spectrum, cv.COLOR_GRAY2RGB)
+        height, width, channel = phase_spectrum.shape
+        bytes_per_channel = channel * (phase_spectrum.dtype.itemsize)
+        qimage = QImage(phase_spectrum.data, width, height,
                         bytes_per_channel * width, QImage.Format.Format_RGB888)
         pixmap = QPixmap.fromImage(qimage)
-        pixmap = pixmap.scaled(self.IMG_WIDTH, self.IMG_HEIGHT,
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-        self.fft_inverted_label.setPixmap(pixmap)
+        self.fft_phase_label.setPixmap(pixmap)

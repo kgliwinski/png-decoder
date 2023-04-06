@@ -277,3 +277,20 @@ class bKGD(Chunk):
     
     def get_bkgd_data(self) -> Union[int, tuple]:
         return self.background
+    
+class sRGB(Chunk):
+    def __init__(self) -> None:
+        pass
+
+    def process_srgb_data(self) -> bool:
+        if self.chunk_length != 1:
+            log.error(
+                "ERROR: sRGB should be of length 1, but its length is %d", self.chunk_length)
+            return False
+        self.rendering_intent = int.from_bytes(self.chunk_data, 'big')
+        log.info(f"Rendering intent: {self.rendering_intent}")
+        return True
+
+    def get_srgb_data(self) -> int:
+        return self.rendering_intent
+    
