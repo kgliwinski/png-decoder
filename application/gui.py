@@ -6,7 +6,6 @@ from PyQt6 import QtCore
 import png_class as png
 from chunk_class import IHDR, PLTE
 import glob
-from matplotlib.backends.backend_qt import FigureCanvasQT as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
 # from os import listdir
@@ -29,11 +28,13 @@ class MainWindow(QMainWindow):
         self.tab2 = QWidget()
         self.tab3 = QWidget()
         self.tab4 = QWidget()
+        self.tab5 = QWidget()
 
         self.tab_widget.addTab(self.tab1, "IHDR and image")
         self.tab_widget.addTab(self.tab2, "PLTE")
         self.tab_widget.addTab(self.tab3, "FFT")
         self.tab_widget.addTab(self.tab4, "Ancilliary chunks")
+        self.tab_widget.addTab(self.tab5, "Anomized image")
 
         self.tab_widget.setTabBarAutoHide(True)
 
@@ -41,6 +42,7 @@ class MainWindow(QMainWindow):
         self.create_plte_tab()
         self.create_fft_tab()
         self.create_ancilliary_chunks_tab()
+        self.create_anomized_image_tab()
 
         self.showMaximized()
 
@@ -219,7 +221,7 @@ class MainWindow(QMainWindow):
         self.line_two.addWidget(self.fft_inverted_phase_label)
         self.line_two.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
-        
+
         tab3_layout = QVBoxLayout()
         tab3_layout.addLayout(self.line_one)
         tab3_layout.addLayout(self.line_two)
@@ -251,6 +253,73 @@ class MainWindow(QMainWindow):
         tab4_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
         self.tab4.setLayout(tab4_layout)
+
+    def create_anomized_image_tab(self):
+        self.anomized_image_label = QLabel("Anomized image:")
+        self.anomized_image_label.setFixedSize(
+            self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.anomized_image_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.anomized_image_field = QLabel()
+        self.anomized_image_field.setFixedSize(
+            self.IMG_WIDTH, self.IMG_HEIGHT)
+        self.anomized_image_field.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.anomized_image_data_size_label = QLabel(
+            "Anomized image data size:")
+        self.anomized_image_data_size_field = QLineEdit(self.tab5)
+        self.anomized_image_data_size_field.setReadOnly(True)
+
+        self.anomized_image_data_size_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.anomized_data_deleted_chunks_number_label = QLabel(
+            "Anomized data deleted chunks number:")
+        self.anomized_data_deleted_chunks_number_field = QLineEdit(
+            self.tab5)
+        self.anomized_data_deleted_chunks_number_field.setReadOnly(True)
+
+        self.anomized_data_deleted_chunks_list_label = QLabel(
+            "Anomized data deleted chunks list:")
+        self.anomized_data_deleted_chunks_list_field = QLineEdit(
+            self.tab5)
+        self.anomized_data_deleted_chunks_list_field.setReadOnly(True)
+
+        # create two columns
+        self.anomized_image_column_one = QVBoxLayout()
+        self.anomized_image_column_one.addWidget(self.anomized_image_label)
+        self.anomized_image_column_one.addWidget(self.anomized_image_field)
+
+        self.anomized_image_column_two = QVBoxLayout()
+        self.anomized_image_column_two.addWidget(
+            self.anomized_image_data_size_label)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_image_data_size_field)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_data_deleted_chunks_number_label)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_data_deleted_chunks_number_field)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_data_deleted_chunks_list_label)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_data_deleted_chunks_list_field)
+
+        # create one line
+        self.anomized_image_line = QHBoxLayout()
+        self.anomized_image_line.addLayout(self.anomized_image_column_one)
+        self.anomized_image_line.addLayout(self.anomized_image_column_two)
+
+        self.anomized_image_line.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        tab5_layout = QVBoxLayout()
+        tab5_layout.addLayout(self.anomized_image_line)
+
+        tab5_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+
+        self.tab5.setLayout(tab5_layout)
 
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
@@ -291,6 +360,7 @@ class MainWindow(QMainWindow):
                 self.palette_size_field.setText("PLTE chunk not found")
                 self.palette_data_field.setPlainText("None")
             self.update_fourier_transform()
+            self.update_anomized_image()
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
             pass
@@ -369,7 +439,7 @@ class MainWindow(QMainWindow):
                         bytes_per_channel * width, QImage.Format.Format_RGB888)
         pixmap = QPixmap.fromImage(qimage)
         pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
-                                 aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.fft_inverted_spectrum_label.setPixmap(pixmap)
 
         # phase of the inverted image
@@ -382,8 +452,22 @@ class MainWindow(QMainWindow):
                         bytes_per_channel * width, QImage.Format.Format_RGB888)
         pixmap = QPixmap.fromImage(qimage)
         pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
-                                 aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.fft_inverted_phase_label.setPixmap(pixmap)
-        
 
+    def update_anomized_image(self):
+        self.anomized = png.AnomizedPng(self.png_path)
+        self.anomized.build_png_from_chunks('.tmp/anomized.png')
+        img = cv.imread('.tmp/anomized.png', cv.IMREAD_GRAYSCALE)
+        pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
+                                          QImage.Format.Format_Grayscale8))
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.anomized_image_label.setPixmap(pixmap)
 
+        self.anomized_image_data_size_field.setText(
+            str(self.anomized.get_png_data_size()))
+        self.anomized_data_deleted_chunks_number_field.setText(
+            str(self.anomized.get_deleted_chunks_number()))
+        self.anomized_data_deleted_chunks_list_field.setText(
+            str(self.anomized.get_deleted_chunks_list()))

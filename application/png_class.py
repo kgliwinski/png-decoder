@@ -91,7 +91,7 @@ class Png:
         else:
             log.info("Ending chunk processing OK")
         return True
-    
+
     def process_gama(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -106,7 +106,7 @@ class Png:
         else:
             log.info("gAMA chunk processing OK")
         return True
-    
+
     def process_chrm(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -121,7 +121,7 @@ class Png:
         else:
             log.info("cHRM chunk processing OK")
         return True
-    
+
     def process_bkgd(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -191,7 +191,7 @@ class Png:
             20*np.log10(np.abs(fourier_shifted)), dtype=np.uint8)
         fourier_phase = np.asarray(np.angle(fourier_shifted), dtype=np.uint8)
 
-        plt.rcParams['figure.figsize'] = [4,3]
+        plt.rcParams['figure.figsize'] = [4, 3]
         plt.rcParams['figure.dpi'] = 200
 
         f1 = plt.figure(1)  # show source image and FFT
@@ -204,10 +204,10 @@ class Png:
 
         plt.subplot(133), plt.imshow(fourier_phase, cmap='gray')
         plt.title('FFT Phase'), plt.xticks([]), plt.yticks([])
-        
+
         if save:
-            plt.savefig(tmp_name + "_spectrum.png", dpi = 2000)
-        
+            plt.savefig(tmp_name + "_spectrum.png", dpi=2000)
+
         f2 = plt.figure(2)  # comapare source image and inverted fft
         fourier_inverted = np.fft.ifft2(fourier)
 
@@ -217,6 +217,61 @@ class Png:
             fourier_inverted, dtype=np.uint8), cmap='gray')
         plt.title('Inverted Image'), plt.xticks([]), plt.yticks([])
         if save:
-            plt.savefig(tmp_name + "_inverted.png", dpi = 200)
+            plt.savefig(tmp_name + "_inverted.png", dpi=200)
 
         return (tmp_name + "_spectrum.png", tmp_name + "_inverted.png")
+
+
+class AnomizedPng(Png):
+    def __init__(self, file_png_name: str):
+        super().__init__(file_png_name)
+        self.anomized_chunks = []
+        self.remove_aucilliary_chunks()
+        log.info("%s", self.__str__())
+        log.info("Anomized PNG created")
+
+    def __str__(self) -> str:
+        return super().__str__() + "Anomized chunks: " + str(self.anomized_chunks)
+
+    def remove_aucilliary_chunks(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        for i in chunk_types:
+            if i not in ['IHDR', 'PLTE', 'IDAT', 'IEND']:
+                self.anomized_chunks.append(i)
+                self.remove_chunk(i)
+        log.info("Removed %d chunks from image", len(self.anomized_chunks))
+        return True
+
+    def remove_chunk(self, chunk_type: str) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index(chunk_type)
+        except:
+            log.info("No %s section in this image!", chunk_type)
+            return False
+        self.chunks.pop(index)
+        return True
+
+    def build_png_from_chunks(self, file_name: str) -> bool:
+        with open(file_name, 'wb') as f:
+            f.write(self.get_signature())
+            log.info("Signature: %s", self.get_signature())
+            for i in self.chunks:
+                f.write(i.get_chunk())
+                # log.info("Chunk: %s", i.get_chunk())
+        return True
+
+    def get_signature(self) -> bytes:
+        return self.signature
+
+    def get_chunk_types(self) -> list:
+        return [i.get_chunk_type() for i in self.chunks]
+    
+    def get_png_data_size(self) -> int:
+        return sum([i.get_chunk_size() for i in self.chunks])
+    
+    def get_deleted_chunks_number(self) -> int:
+        return len(self.anomized_chunks)
+
+    def get_deleted_chunks_list(self) -> list:
+        return self.anomized_chunks

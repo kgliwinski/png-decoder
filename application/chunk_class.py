@@ -95,6 +95,12 @@ class Chunk:
         Get chunk type :D
         """
         return self.chunk_type
+    
+    def get_chunk(self) -> bytes:
+        """
+        Get chunk data :D
+        """
+        return self.chunk_data
 
 
 class IHDR(Chunk):
