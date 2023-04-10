@@ -5,6 +5,7 @@ several "special" chunks
 import logging as log
 from typing import List, Dict, Tuple, Union
 
+
 class Chunk:
     """
     Class for representing base chunks in PNG format:
@@ -45,10 +46,11 @@ class Chunk:
         consecutive bytes
         """
 
-        length = self.file_ptr.read(self.LENGTH_FIELD_LEN)
+        self.raw_length = self.file_ptr.read(self.LENGTH_FIELD_LEN)
 
         # log.debug(length)
-        self.chunk_length = int.from_bytes(length, 'big', signed=False)
+        self.chunk_length = int.from_bytes(
+            self.raw_length, 'big', signed=False)
         log.info("Chunk length: %d", self.chunk_length)
 
     def read_chunk_type(self):
@@ -95,12 +97,19 @@ class Chunk:
         Get chunk type :D
         """
         return self.chunk_type
-    
+
     def get_chunk(self) -> bytes:
         """
         Get chunk data :D
         """
+
         return self.chunk_data
+    
+    def all_chunk_data_to_bytes(self) -> bytes:
+        """
+        Returns all chunk data as bytes
+        """
+        return self.raw_length + self.chunk_type.encode('ascii') + self.chunk_data + self.crc32_value.to_bytes(self.CRC_FIELD_LEN, 'big')
 
 
 class IHDR(Chunk):
@@ -262,6 +271,7 @@ class cHRM(Chunk):
     def get_chrm_data(self) -> dict:
         return {"white_point_x": self.white_point_x, "white_point_y": self.white_point_y, "red_x": self.red_x, "red_y": self.red_y, "green_x": self.green_x, "green_y": self.green_y, "blue_x": self.blue_x, "blue_y": self.blue_y}
 
+
 class bKGD(Chunk):
     def __init__(self) -> None:
         pass
@@ -280,10 +290,11 @@ class bKGD(Chunk):
                                int.from_bytes(self.chunk_data[4:6], 'big'))
             log.info(f"Background color: {self.background}")
         return True
-    
+
     def get_bkgd_data(self) -> Union[int, tuple]:
         return self.background
-    
+
+
 class sRGB(Chunk):
     def __init__(self) -> None:
         pass
@@ -299,4 +310,3 @@ class sRGB(Chunk):
 
     def get_srgb_data(self) -> int:
         return self.rendering_intent
-    

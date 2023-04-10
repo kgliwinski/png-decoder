@@ -254,11 +254,12 @@ class AnomizedPng(Png):
 
     def build_png_from_chunks(self, file_name: str) -> bool:
         with open(file_name, 'wb') as f:
-            f.write(self.get_signature())
+            f.write(bytes(self.get_signature()))
             log.info("Signature: %s", self.get_signature())
             for i in self.chunks:
-                f.write(i.get_chunk())
-                # log.info("Chunk: %s", i.get_chunk())
+                f.write(pr := i.all_chunk_data_to_bytes())
+
+                log.info("Chunk type: %s", i.get_chunk_type())
         return True
 
     def get_signature(self) -> bytes:
