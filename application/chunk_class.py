@@ -111,6 +111,11 @@ class Chunk:
         """
         return self.raw_length + self.chunk_type.encode('ascii') + self.chunk_data + self.crc32_value.to_bytes(self.CRC_FIELD_LEN, 'big')
 
+    def get_chunk_size(self) -> int:
+        """
+        Get chunk size :D
+        """
+        return self.chunk_length + self.LENGTH_FIELD_LEN + self.TYPE_FIELD_LEN + self.CRC_FIELD_LEN
 
 class IHDR(Chunk):
     hdr_data = {

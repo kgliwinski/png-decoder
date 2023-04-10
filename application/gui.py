@@ -273,7 +273,7 @@ class MainWindow(QMainWindow):
         self.anomized_image_data_size_field.setReadOnly(True)
 
         self.anomized_image_data_size_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+            QtCore.Qt.AlignmentFlag.AlignTop)
 
         self.anomized_data_deleted_chunks_number_label = QLabel(
             "Anomized data deleted chunks number:")
@@ -292,6 +292,9 @@ class MainWindow(QMainWindow):
         self.anomized_image_column_one.addWidget(self.anomized_image_label)
         self.anomized_image_column_one.addWidget(self.anomized_image_field)
 
+        self.anomized_image_column_one.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop)
+
         self.anomized_image_column_two = QVBoxLayout()
         self.anomized_image_column_two.addWidget(
             self.anomized_image_data_size_label)
@@ -305,6 +308,9 @@ class MainWindow(QMainWindow):
             self.anomized_data_deleted_chunks_list_label)
         self.anomized_image_column_two.addWidget(
             self.anomized_data_deleted_chunks_list_field)
+
+        self.anomized_image_column_two.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop)
 
         # create one line
         self.anomized_image_line = QHBoxLayout()
@@ -458,9 +464,9 @@ class MainWindow(QMainWindow):
     def update_anomized_image(self):
         self.anomized = png.AnomizedPng(self.png_path)
         self.anomized.build_png_from_chunks('.tmp/anomized.png')
-        img = cv.imread('.tmp/anomized.png', cv.IMREAD_GRAYSCALE)
+        img = cv.imread('.tmp/anomized.png')
         pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
-                                          QImage.Format.Format_Grayscale8))
+                                          QImage.Format.Format_BGR888))
         pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.anomized_image_label.setPixmap(pixmap)
