@@ -50,6 +50,9 @@ class Png:
             tmp = chunk.Chunk(self.file_png)
             self.chunks.append(tmp)
 
+    def get_signature(self) -> bytes:
+        return self.signature
+
     def get_chunk_types(self) -> list:
         return [chunk.get_chunk_type() for chunk in self.chunks]
 
@@ -221,6 +224,18 @@ class Png:
 
         return (tmp_name + "_spectrum.png", tmp_name + "_inverted.png")
 
+    def get_png_data_size(self) -> int:
+        return sum([i.get_chunk_size() for i in self.chunks])
+
+    def get_ancilliary_chunks(self) -> list:
+        chunk_types = self.chunks
+        ancilliary_chunks = []
+        for i in chunk_types:
+            if i.get_chunk_type() not in ['IHDR', 'PLTE', 'IDAT', 'IEND']:
+                ancilliary_chunks.append(i)
+                log.info("Found ancilliary chunk: %s", i.get_chunk_type())
+        return ancilliary_chunks
+
 
 class AnomizedPng(Png):
     def __init__(self, file_png_name: str):
@@ -257,20 +272,11 @@ class AnomizedPng(Png):
             f.write(bytes(self.get_signature()))
             log.info("Signature: %s", self.get_signature())
             for i in self.chunks:
-                f.write(pr := i.all_chunk_data_to_bytes())
+                f.write(i.all_chunk_data_to_bytes())
 
                 log.info("Chunk type: %s", i.get_chunk_type())
         return True
 
-    def get_signature(self) -> bytes:
-        return self.signature
-
-    def get_chunk_types(self) -> list:
-        return [i.get_chunk_type() for i in self.chunks]
-    
-    def get_png_data_size(self) -> int:
-        return sum([i.get_chunk_size() for i in self.chunks])
-    
     def get_deleted_chunks_number(self) -> int:
         return len(self.anomized_chunks)
 

@@ -8,6 +8,7 @@ from chunk_class import IHDR, PLTE
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 # from os import listdir
 
 
@@ -232,24 +233,24 @@ class MainWindow(QMainWindow):
 
     def create_ancilliary_chunks_tab(self):
         self.gama_label = QLabel("gAMA:")
-        self.gama_field = QPlainTextEdit(self.tab4)
+        self.gama_field = QLineEdit(self.tab4)
         self.gama_field.setReadOnly(True)
 
         self.chrm_label = QLabel("cHRM:")
-        self.chrm_field = QPlainTextEdit(self.tab4)
+        self.chrm_field = QLineEdit(self.tab4)
         self.chrm_field.setReadOnly(True)
 
-        self.srgb_label = QLabel("bKGD:")
-        self.srgb_field = QPlainTextEdit(self.tab4)
-        self.srgb_field.setReadOnly(True)
+        self.bkgd_label = QLabel("bKGD:")
+        self.bkgd_field = QLineEdit(self.tab4)
+        self.bkgd_field.setReadOnly(True)
 
         tab4_layout = QVBoxLayout()
         tab4_layout.addWidget(self.gama_label)
         tab4_layout.addWidget(self.gama_field)
         tab4_layout.addWidget(self.chrm_label)
         tab4_layout.addWidget(self.chrm_field)
-        tab4_layout.addWidget(self.srgb_label)
-        tab4_layout.addWidget(self.srgb_field)
+        tab4_layout.addWidget(self.bkgd_label)
+        tab4_layout.addWidget(self.bkgd_field)
         tab4_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
         self.tab4.setLayout(tab4_layout)
@@ -268,7 +269,7 @@ class MainWindow(QMainWindow):
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
         self.anomized_image_data_size_label = QLabel(
-            "Anomized image data size:")
+            "Anomized vs. original image data size, difference in size:")
         self.anomized_image_data_size_field = QLineEdit(self.tab5)
         self.anomized_image_data_size_field.setReadOnly(True)
 
@@ -366,6 +367,7 @@ class MainWindow(QMainWindow):
                 self.palette_size_field.setText("PLTE chunk not found")
                 self.palette_data_field.setPlainText("None")
             self.update_fourier_transform()
+            self.update_ancilliary_chunks()
             self.update_anomized_image()
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
@@ -380,6 +382,8 @@ class MainWindow(QMainWindow):
         self.compression_method_field.setText(str(data["compression_method"]))
         self.filter_method_field.setText(str(data["filter_method"]))
         self.interlace_method_field.setText(str(data["interlace_method"]))
+
+        self.png_size = os.path.getsize(self.png_path)
 
     def update_fields_from_plte(self, plte: PLTE):
         data = plte.get_plte_data()
@@ -461,6 +465,18 @@ class MainWindow(QMainWindow):
                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.fft_inverted_phase_label.setPixmap(pixmap)
 
+    def update_ancilliary_chunks(self):
+        ancilliary = self.png_type.get_ancilliary_chunks()
+        for chunk in ancilliary:
+            if chunk.get_chunk_type() == 'gAMA':
+                self.gama_field.setText(str(chunk.get_chunk()))
+            elif chunk.get_chunk_type() == 'cHRM':
+                self.chrm_field.setText(str(chunk.get_chunk()))
+            # elif chunk.get_chunk_type() == 'sRGB':
+            #     self.srgb_field.setText(str(chunk.get_chunk_data()))
+            elif chunk.get_chunk_type() == 'bKGD':
+                self.bkgd_field.setText(str(chunk.get_chunk()))
+
     def update_anomized_image(self):
         self.anomized = png.AnomizedPng(self.png_path)
         self.anomized.build_png_from_chunks('.tmp/anomized.png')
@@ -472,7 +488,12 @@ class MainWindow(QMainWindow):
         self.anomized_image_label.setPixmap(pixmap)
 
         self.anomized_image_data_size_field.setText(
-            str(self.anomized.get_png_data_size()))
+            str(self.anomized.get_png_data_size()) + " vs. " +
+            str(self.png_type.get_png_data_size()) +
+            ". Difference of: " +
+            str(self.png_type.get_png_data_size() -
+                self.anomized.get_png_data_size())
+            + " bytes")
         self.anomized_data_deleted_chunks_number_field.setText(
             str(self.anomized.get_deleted_chunks_number()))
         self.anomized_data_deleted_chunks_list_field.setText(
