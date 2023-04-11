@@ -241,7 +241,9 @@ class AnomizedPng(Png):
     def __init__(self, file_png_name: str):
         super().__init__(file_png_name)
         self.anomized_chunks = []
+        self.crc_saved_bytes = 0
         self.remove_aucilliary_chunks()
+        self.update_crcs()
         log.info("%s", self.__str__())
         log.info("Anomized PNG created")
 
@@ -256,6 +258,19 @@ class AnomizedPng(Png):
                 self.remove_chunk(i)
         log.info("Removed %d chunks from image", len(self.anomized_chunks))
         return True
+
+    def update_crcs(self) -> bool:
+        for i in self.chunks:
+            if i.replace_crc(b'pppp') == True:
+                self.crc_saved_bytes += chunk.Chunk.CRC_FIELD_LEN
+                log.info("Updated CRC for chunk %s", i.get_chunk_type())
+            else:
+                log.error("Failed to update CRC for chunk %s",
+                          i.get_chunk_type())
+        return True
+
+    def get_crc_saved_bytes(self) -> int:
+        return self.crc_saved_bytes
 
     def remove_chunk(self, chunk_type: str) -> bool:
         chunk_types = self.get_chunk_types()
@@ -282,3 +297,6 @@ class AnomizedPng(Png):
 
     def get_deleted_chunks_list(self) -> list:
         return self.anomized_chunks
+
+    def get_png_data_size(self) -> int:
+        return super().get_png_data_size() - self.get_crc_saved_bytes()

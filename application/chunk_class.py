@@ -34,6 +34,8 @@ class Chunk:
         self.read_crc32()
         if (self.chunk_type == 'IHDR'):
             self.__class__ = IHDR
+        elif (self.chunk_type == 'IDAT'):
+            self.__class__ = IDAT
         elif (self.chunk_type == 'PLTE'):
             self.__class__ = PLTE
         elif (self.chunk_type == 'IEND'):
@@ -80,10 +82,10 @@ class Chunk:
         self.crc32_value is the unsigned int as big endian 
         representation of the last 4 bytes
         """
-        crc32 = self.file_ptr.read(self.CRC_FIELD_LEN)
+        self.crc32 = self.file_ptr.read(self.CRC_FIELD_LEN)
 
         # log.debug(crc32)
-        self.crc32_value = int.from_bytes(crc32, 'big')
+        self.crc32_value = int.from_bytes(self.crc32, 'big')
         log.info("Chunk crc32: %d", self.crc32_value)
 
     def get_length(self) -> int:
@@ -116,6 +118,19 @@ class Chunk:
         Get chunk size :D
         """
         return self.chunk_length + self.LENGTH_FIELD_LEN + self.TYPE_FIELD_LEN + self.CRC_FIELD_LEN
+
+    def replace_crc(self, new_crc: bytes) -> bool:
+        """
+        Replaces the current crc32 value with a new one
+        """
+        if len(new_crc) != self.CRC_FIELD_LEN:
+            return False
+        self.crc32 = new_crc
+        return True
+
+class IDAT(Chunk):
+    def __init__(self, file_ptr) -> None:
+        pass
 
 class IHDR(Chunk):
     hdr_data = {

@@ -467,15 +467,21 @@ class MainWindow(QMainWindow):
 
     def update_ancilliary_chunks(self):
         ancilliary = self.png_type.get_ancilliary_chunks()
+        ancilliary_types = [i.get_chunk_type() for i in ancilliary]
         for chunk in ancilliary:
             if chunk.get_chunk_type() == 'gAMA':
                 self.gama_field.setText(str(chunk.get_chunk()))
-            elif chunk.get_chunk_type() == 'cHRM':
+            if chunk.get_chunk_type() == 'cHRM':
                 self.chrm_field.setText(str(chunk.get_chunk()))
-            # elif chunk.get_chunk_type() == 'sRGB':
-            #     self.srgb_field.setText(str(chunk.get_chunk_data()))
             elif chunk.get_chunk_type() == 'bKGD':
                 self.bkgd_field.setText(str(chunk.get_chunk()))
+
+        if 'gAMA' not in ancilliary_types:
+            self.gama_field.setText('No gAMA chunk found')
+        if 'cHRM' not in ancilliary_types:
+            self.chrm_field.setText('No cHRM chunk found')
+        if 'bKGD' not in ancilliary_types:
+            self.bkgd_field.setText('No bKGD chunk found')
 
     def update_anomized_image(self):
         self.anomized = png.AnomizedPng(self.png_path)
