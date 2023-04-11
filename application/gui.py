@@ -288,6 +288,13 @@ class MainWindow(QMainWindow):
             self.tab5)
         self.anomized_data_deleted_chunks_list_field.setReadOnly(True)
 
+        self.anomized_data_updated_crc_number_label = QLabel(
+            "Anomized data updated CRC chunks number:")
+        self.anomized_data_updated_crc_number_field = QLineEdit(
+            self.tab5)
+        self.anomized_data_updated_crc_number_field.setReadOnly(True)
+
+
         # create two columns
         self.anomized_image_column_one = QVBoxLayout()
         self.anomized_image_column_one.addWidget(self.anomized_image_label)
@@ -309,6 +316,10 @@ class MainWindow(QMainWindow):
             self.anomized_data_deleted_chunks_list_label)
         self.anomized_image_column_two.addWidget(
             self.anomized_data_deleted_chunks_list_field)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_data_updated_crc_number_label)
+        self.anomized_image_column_two.addWidget(
+            self.anomized_data_updated_crc_number_field)
 
         self.anomized_image_column_two.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop)
@@ -504,3 +515,5 @@ class MainWindow(QMainWindow):
             str(self.anomized.get_deleted_chunks_number()))
         self.anomized_data_deleted_chunks_list_field.setText(
             str(self.anomized.get_deleted_chunks_list()))
+        self.anomized_data_updated_crc_number_field.setText(
+            str(self.anomized.get_crc_saved_bytes()))
