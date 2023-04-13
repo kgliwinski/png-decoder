@@ -24,11 +24,16 @@ class Png:
             raise Exception("File error")
         self.signature = []
         self.chunks = []
+        self.ancilliary_dict = {}
         self.read_signature()
         self.read_chunks()
         self.process_header()
         self.process_palette()
         self.process_ending()
+        self.process_gama()
+        self.process_chrm()
+        self.process_bkgd()
+        log.info("Ancilliary dictionary: %s", self.ancilliary_dict)
 
     def __del__(self):
         if not self.file_png.closed:
@@ -55,6 +60,9 @@ class Png:
 
     def get_chunk_types(self) -> list:
         return [chunk.get_chunk_type() for chunk in self.chunks]
+
+    def get_ancilliary_dict(self) -> dict:
+        return self.ancilliary_dict
 
     def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()
@@ -108,6 +116,7 @@ class Png:
             return False
         else:
             log.info("gAMA chunk processing OK")
+        self.ancilliary_dict['gAMA'] = self.chunks[index].get_gama_data()
         return True
 
     def process_chrm(self) -> bool:
@@ -123,6 +132,7 @@ class Png:
             return False
         else:
             log.info("cHRM chunk processing OK")
+        self.ancilliary_dict['cHRM'] = self.chunks[index].get_chrm_data()
         return True
 
     def process_bkgd(self) -> bool:
@@ -138,6 +148,7 @@ class Png:
             return False
         else:
             log.info("bKGD chunk processing OK")
+        self.ancilliary_dict['bKGD'] = self.chunks[index].get_bkgd_data()
         return True
 
     def get_all_chunk_numbers(self) -> dict:

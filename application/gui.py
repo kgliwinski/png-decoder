@@ -1,6 +1,6 @@
 
 import cv2 as cv
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget, QPlainTextEdit, QScrollArea
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QTabWidget, QTextEdit, QPlainTextEdit, QScrollArea
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
 import png_class as png
@@ -18,7 +18,7 @@ class MainWindow(QMainWindow):
     IMG_WIDTH = 800
     GRAPH_WIDTH_AND_HEIGHT = 400
 
-    png_type: png = None
+    png_type: png.Png = None
 
     def __init__(self):
         super().__init__()
@@ -244,6 +244,14 @@ class MainWindow(QMainWindow):
         self.bkgd_field = QLineEdit(self.tab4)
         self.bkgd_field.setReadOnly(True)
 
+        self.srgb_label = QLabel("sRGB:")
+        self.srgb_field = QLineEdit(self.tab4)
+        self.srgb_field.setReadOnly(True)
+
+        self.exif_label = QLabel("eXIf:")
+        self.exif_field = QLineEdit(self.tab4)
+        self.exif_field.setReadOnly(True)
+
         tab4_layout = QVBoxLayout()
         tab4_layout.addWidget(self.gama_label)
         tab4_layout.addWidget(self.gama_field)
@@ -251,6 +259,10 @@ class MainWindow(QMainWindow):
         tab4_layout.addWidget(self.chrm_field)
         tab4_layout.addWidget(self.bkgd_label)
         tab4_layout.addWidget(self.bkgd_field)
+        tab4_layout.addWidget(self.srgb_label)
+        tab4_layout.addWidget(self.srgb_field)
+        tab4_layout.addWidget(self.exif_label)
+        tab4_layout.addWidget(self.exif_field)
         tab4_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
         self.tab4.setLayout(tab4_layout)
@@ -293,7 +305,6 @@ class MainWindow(QMainWindow):
         self.anomized_data_updated_crc_number_field = QLineEdit(
             self.tab5)
         self.anomized_data_updated_crc_number_field.setReadOnly(True)
-
 
         # create two columns
         self.anomized_image_column_one = QVBoxLayout()
@@ -477,22 +488,28 @@ class MainWindow(QMainWindow):
         self.fft_inverted_phase_label.setPixmap(pixmap)
 
     def update_ancilliary_chunks(self):
-        ancilliary = self.png_type.get_ancilliary_chunks()
-        ancilliary_types = [i.get_chunk_type() for i in ancilliary]
-        for chunk in ancilliary:
-            if chunk.get_chunk_type() == 'gAMA':
-                self.gama_field.setText(str(chunk.get_chunk()))
-            if chunk.get_chunk_type() == 'cHRM':
-                self.chrm_field.setText(str(chunk.get_chunk()))
-            elif chunk.get_chunk_type() == 'bKGD':
-                self.bkgd_field.setText(str(chunk.get_chunk()))
+        ancilliary = self.png_type.get_ancilliary_dict()
 
-        if 'gAMA' not in ancilliary_types:
+        if 'gAMA' not in ancilliary.keys():
             self.gama_field.setText('No gAMA chunk found')
-        if 'cHRM' not in ancilliary_types:
+        else:
+            self.gama_field.setText(str(ancilliary['gAMA']))
+        if 'cHRM' not in ancilliary.keys():
             self.chrm_field.setText('No cHRM chunk found')
-        if 'bKGD' not in ancilliary_types:
+        else:
+            self.chrm_field.setText(str(ancilliary['cHRM']))
+        if 'bKGD' not in ancilliary.keys():
             self.bkgd_field.setText('No bKGD chunk found')
+        else:
+            self.bkgd_field.setText(str(ancilliary['bKGD']))
+        if 'sRGB' not in ancilliary.keys():
+            self.srgb_field.setText('No sRGB chunk found')
+        else:
+            self.srgb_field.setText(str(ancilliary['sRGB']))
+        if 'eXIf' not in ancilliary.keys():
+            self.exif_field.setText('No eXIf chunk found')
+        else:
+            self.exif_field.setText(str(ancilliary['eXIf']))
 
     def update_anomized_image(self):
         self.anomized = png.AnomizedPng(self.png_path)

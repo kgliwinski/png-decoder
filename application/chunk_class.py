@@ -40,6 +40,16 @@ class Chunk:
             self.__class__ = PLTE
         elif (self.chunk_type == 'IEND'):
             self.__class__ = IEND
+        elif(self.chunk_type == 'gAMA'):
+            self.__class__ = gAMA
+        elif(self.chunk_type == 'cHRM'):
+            self.__class__ = cHRM
+        elif(self.chunk_type == 'sRGB'):
+            self.__class__ = sRGB
+        elif(self.chunk_type == 'eXIf'):
+            self.__class__ = eXIf
+        elif(self.chunk_type == 'bKGD'):
+            self.__class__ = bKGD
 
     def read_length(self):
         """
@@ -252,7 +262,7 @@ class gAMA(Chunk):
         log.info(f"Gamma value: {self.gamma}")
         return True
 
-    def get_gamma(self) -> float:
+    def get_gama_data(self) -> float:
         return self.gamma
 
 
@@ -297,11 +307,14 @@ class bKGD(Chunk):
         pass
 
     def process_bkgd_data(self) -> bool:
-        if self.chunk_length not in (2, 6):
+        if self.chunk_length not in (1, 2, 6):
             log.error(
                 "ERROR: bKGD should be of length 2 or 6, but its length is %d", self.chunk_length)
             return False
-        if self.chunk_length == 2:
+        if self.chunk_length == 1:
+            self.background = self.chunk_data[0]
+            log.info(f"Background color: {self.background}")
+        elif self.chunk_length == 2:
             self.background = int.from_bytes(self.chunk_data, 'big')
             log.info(f"Background color: {self.background}")
         else:
@@ -330,3 +343,18 @@ class sRGB(Chunk):
 
     def get_srgb_data(self) -> int:
         return self.rendering_intent
+    
+class eXIf(Chunk):
+    def __init__(self) -> None:
+        pass
+
+    def process_exif_data(self) -> bool:
+        if self.chunk_length < 6:
+            log.error(
+                "ERROR: eXIF should be of length at least 6, but its length is %d", self.chunk_length)
+            return False
+        self.exif_data = self.chunk_data
+        return True
+
+    def get_exif_data(self) -> bytes:
+        return self.exif_data
