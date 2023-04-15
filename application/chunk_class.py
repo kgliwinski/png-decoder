@@ -40,15 +40,15 @@ class Chunk:
             self.__class__ = PLTE
         elif (self.chunk_type == 'IEND'):
             self.__class__ = IEND
-        elif(self.chunk_type == 'gAMA'):
+        elif (self.chunk_type == 'gAMA'):
             self.__class__ = gAMA
-        elif(self.chunk_type == 'cHRM'):
+        elif (self.chunk_type == 'cHRM'):
             self.__class__ = cHRM
-        elif(self.chunk_type == 'sRGB'):
+        elif (self.chunk_type == 'sRGB'):
             self.__class__ = sRGB
-        elif(self.chunk_type == 'eXIf'):
+        elif (self.chunk_type == 'eXIf'):
             self.__class__ = eXIf
-        elif(self.chunk_type == 'bKGD'):
+        elif (self.chunk_type == 'bKGD'):
             self.__class__ = bKGD
 
     def read_length(self):
@@ -63,7 +63,7 @@ class Chunk:
         # log.debug(length)
         self.chunk_length = int.from_bytes(
             self.raw_length, 'big', signed=False)
-        log.info("Chunk length: %d", self.chunk_length)
+        log.debug("Chunk length: %d", self.chunk_length)
 
     def read_chunk_type(self):
         """
@@ -75,7 +75,7 @@ class Chunk:
         chunk_type = self.file_ptr.read(self.TYPE_FIELD_LEN)
         # log.debug(chunk_type)
         self.chunk_type = chunk_type.decode('ascii')
-        log.info("Chunk type: %s", self.chunk_type)
+        log.debug("Chunk type: %s", self.chunk_type)
 
     def read_data(self):
         """
@@ -84,7 +84,7 @@ class Chunk:
         """
         data = self.file_ptr.read(self.chunk_length)
         self.chunk_data = data
-        # log.info("Chunk data: %s", data)
+        log.debug("Chunk data: %s", data)
 
     def read_crc32(self):
         """
@@ -96,7 +96,7 @@ class Chunk:
 
         # log.debug(crc32)
         self.crc32_value = int.from_bytes(self.crc32, 'big')
-        log.info("Chunk crc32: %d", self.crc32_value)
+        log.debug("Chunk crc32: %d", self.crc32_value)
 
     def get_length(self) -> int:
         """
@@ -116,7 +116,7 @@ class Chunk:
         """
 
         return self.chunk_data
-    
+
     def all_chunk_data_to_bytes(self) -> bytes:
         """
         Returns all chunk data as bytes
@@ -138,9 +138,11 @@ class Chunk:
         self.crc32 = new_crc
         return True
 
+
 class IDAT(Chunk):
     def __init__(self, file_ptr) -> None:
         pass
+
 
 class IHDR(Chunk):
     hdr_data = {
@@ -343,18 +345,55 @@ class sRGB(Chunk):
 
     def get_srgb_data(self) -> int:
         return self.rendering_intent
-    
+
+
+class hIST(Chunk):
+    def __init__(self) -> None:
+        pass
+
+    def process_hist_data(self) -> bool:
+        if self.chunk_length % 2 != 0:
+            log.error(
+                "ERROR: hIST should be of even length, but its length is %d", self.chunk_length)
+            return False
+        self.histogram = []
+        for i in range(0, self.chunk_length, 2):
+            self.histogram.append(int.from_bytes(
+                self.chunk_data[i:i+2], 'big'))
+        log.info(f"Printing the histogram list: {self.histogram}")
+        return True
+
+    def get_hist_data(self) -> list:
+        return self.histogram
+
+
 class eXIf(Chunk):
     def __init__(self) -> None:
         pass
 
     def process_exif_data(self) -> bool:
-        if self.chunk_length < 6:
+        if self.chunk_length <= 0:
             log.error(
                 "ERROR: eXIF should be of length at least 6, but its length is %d", self.chunk_length)
             return False
-        self.exif_data = self.chunk_data
+        self.exif_endian = self.chunk_data[0:2]
+        if self.exif_endian != b'II' and self.exif_endian != b'MM':
+            log.error(
+                "ERROR: eXIF should start with II or MM, but it starts with %s", self.exif_endian)
+            return False
+        elif self.exif_endian == b'II':
+            self.exif_endian_str = 'Little endian'
+        else:
+            self.exif_endian_str = 'Big endian'
+
+        self.exif_fourty_two = int.from_bytes(self.chunk_data[2:4], 'big')
+        if self.exif_fourty_two != 42:
+            log.error(
+                "ERROR: eXIF should have 42 as the next two bytes, but it has %d", self.exif_fourty_two)
+            return False
+        print(
+            f"Exif endian: {self.exif_endian_str}, Exif data: {self.exif_fourty_two}")
         return True
 
-    def get_exif_data(self) -> bytes:
-        return self.exif_data
+    def get_exif_data(self) -> dict:
+        return {"exif_endian": self.exif_endian_str, "exif_fourty_two": self.exif_fourty_two}

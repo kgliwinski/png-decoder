@@ -248,6 +248,10 @@ class MainWindow(QMainWindow):
         self.srgb_field = QLineEdit(self.tab4)
         self.srgb_field.setReadOnly(True)
 
+        self.hist_label = QLabel("hIST:")
+        self.hist_field = QLineEdit(self.tab4)
+        self.hist_field.setReadOnly(True)
+
         self.exif_label = QLabel("eXIf:")
         self.exif_field = QLineEdit(self.tab4)
         self.exif_field.setReadOnly(True)
@@ -261,6 +265,8 @@ class MainWindow(QMainWindow):
         tab4_layout.addWidget(self.bkgd_field)
         tab4_layout.addWidget(self.srgb_label)
         tab4_layout.addWidget(self.srgb_field)
+        tab4_layout.addWidget(self.hist_label)
+        tab4_layout.addWidget(self.hist_field)
         tab4_layout.addWidget(self.exif_label)
         tab4_layout.addWidget(self.exif_field)
         tab4_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -506,6 +512,10 @@ class MainWindow(QMainWindow):
             self.srgb_field.setText('No sRGB chunk found')
         else:
             self.srgb_field.setText(str(ancilliary['sRGB']))
+        if 'hIST' not in ancilliary.keys():
+            self.hist_field.setText('No hIST chunk found')
+        else:
+            self.hist_field.setText(str(ancilliary['hIST']))
         if 'eXIf' not in ancilliary.keys():
             self.exif_field.setText('No eXIf chunk found')
         else:

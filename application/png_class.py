@@ -33,6 +33,9 @@ class Png:
         self.process_gama()
         self.process_chrm()
         self.process_bkgd()
+        self.process_srgb()
+        self.process_hist()
+        self.process_exif()
         log.info("Ancilliary dictionary: %s", self.ancilliary_dict)
 
     def __del__(self):
@@ -149,6 +152,70 @@ class Png:
         else:
             log.info("bKGD chunk processing OK")
         self.ancilliary_dict['bKGD'] = self.chunks[index].get_bkgd_data()
+        return True
+    
+    def process_srgb(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('sRGB')
+        except:
+            log.info("No sRGB section in this image!")
+            return False
+        ret = self.chunks[index].process_srgb_data()
+        if ret is False:
+            log.error("sRGB processing gone wrong!")
+            return False
+        else:
+            log.info("sRGB chunk processing OK")
+        self.ancilliary_dict['sRGB'] = self.chunks[index].get_srgb_data()
+        return True
+    
+    def process_exif(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('eXIf')
+        except:
+            log.info("No eXIf section in this image!")
+            return False
+        ret = self.chunks[index].process_exif_data()
+        if ret is False:
+            log.error("eXIf processing gone wrong!")
+            return False
+        else:
+            log.info("eXIf chunk processing OK")
+        self.ancilliary_dict['eXIf'] = self.chunks[index].get_exif_data()
+        return True
+
+    def process_hist(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('hIST')
+        except:
+            log.info("No hIST section in this image!")
+            return False
+        ret = self.chunks[index].process_hist_data()
+        if ret is False:
+            log.error("hIST processing gone wrong!")
+            return False
+        else:
+            log.info("hIST chunk processing OK")
+        self.ancilliary_dict['hIST'] = self.chunks[index].get_hist_data()
+        return True
+    
+    def process_exif(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index('eXIf')
+        except:
+            log.info("No eXIf section in this image!")
+            return False
+        ret = self.chunks[index].process_exif_data()
+        if ret is False:
+            log.error("eXIf processing gone wrong!")
+            return False
+        else:
+            log.info("eXIf chunk processing OK")
+        self.ancilliary_dict['eXIf'] = self.chunks[index].get_exif_data()
         return True
 
     def get_all_chunk_numbers(self) -> dict:
@@ -274,7 +341,7 @@ class AnomizedPng(Png):
         for i in self.chunks:
             if i.replace_crc(b'pppp') == True:
                 self.crc_saved_bytes += chunk.Chunk.CRC_FIELD_LEN
-                log.info("Updated CRC for chunk %s", i.get_chunk_type())
+                log.debug("Updated CRC for chunk %s", i.get_chunk_type())
             else:
                 log.error("Failed to update CRC for chunk %s",
                           i.get_chunk_type())
@@ -300,7 +367,7 @@ class AnomizedPng(Png):
             for i in self.chunks:
                 f.write(i.all_chunk_data_to_bytes())
 
-                log.info("Chunk type: %s", i.get_chunk_type())
+                # log.info("Chunk type: %s", i.get_chunk_type())
         return True
 
     def get_deleted_chunks_number(self) -> int:

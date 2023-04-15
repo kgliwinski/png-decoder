@@ -7,7 +7,8 @@ from matplotlib.backends.backend_qt import FigureCanvasQT as FigureCanvas, QtCor
 import sys
 
 if __name__ == '__main__':
-    log.basicConfig(format='%(levelname)s %(asctime)s %(message)s', level=10)
+    log.basicConfig(
+        format='%(levelname)s {%(pathname)s:%(lineno)d} %(asctime)s %(message)s', level=log.INFO)
     # ex_png : png.Png = png.Png('cat.png')
 
     # print(ex_png.read_signature())
