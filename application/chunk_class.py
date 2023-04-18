@@ -50,6 +50,8 @@ class Chunk:
             self.__class__ = eXIf
         elif (self.chunk_type == 'bKGD'):
             self.__class__ = bKGD
+        elif (self.chunk_type == 'hIST'):
+            self.__class__ = hIST
 
     def read_length(self):
         """

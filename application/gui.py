@@ -208,7 +208,27 @@ class MainWindow(QMainWindow):
         self.fft_inverted_phase_label.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
-        # create two horizontal layouts
+        self.fft_original_image_rotated_label = QLabel(
+            "Original image rotated:")
+        self.fft_original_image_rotated_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+        self.fft_original_image_rotated_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        # fft of 90 degree rotated image
+        self.fft_rotated_spectrum_label = QLabel("FFT spectrum rotated:")
+        self.fft_rotated_spectrum_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+        self.fft_rotated_spectrum_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        self.fft_rotated_phase_label = QLabel("FFT phase rotated:")
+        self.fft_rotated_phase_label.setFixedSize(
+            self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT)
+        self.fft_rotated_phase_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
+        # create three horizontal layouts
         self.line_one = QHBoxLayout()
         self.line_one.addWidget(self.fft_original_image_darkscale_label)
         self.line_one.addWidget(self.fft_spectrum_label)
@@ -223,9 +243,17 @@ class MainWindow(QMainWindow):
         self.line_two.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
+        self.line_three = QHBoxLayout()
+        self.line_three.addWidget(self.fft_original_image_rotated_label)
+        self.line_three.addWidget(self.fft_rotated_spectrum_label)
+        self.line_three.addWidget(self.fft_rotated_phase_label)
+        self.line_three.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
+
         tab3_layout = QVBoxLayout()
         tab3_layout.addLayout(self.line_one)
         tab3_layout.addLayout(self.line_two)
+        tab3_layout.addLayout(self.line_three)
         tab3_layout.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
 
@@ -493,6 +521,41 @@ class MainWindow(QMainWindow):
                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         self.fft_inverted_phase_label.setPixmap(pixmap)
 
+        img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
+        pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
+                                          QImage.Format.Format_Grayscale8))
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_original_image_rotated_label.setPixmap(pixmap)
+
+        # magnitude of the rotatedimage
+        f = np.fft.fft2(img)
+        fshift = np.fft.fftshift(f)
+        magnitude_spectrum = 20*np.log(np.abs(fshift))
+        magnitude_spectrum = np.uint8(magnitude_spectrum)
+        magnitude_spectrum = cv.cvtColor(magnitude_spectrum, cv.COLOR_GRAY2RGB)
+        height, width, channel = magnitude_spectrum.shape
+        bytes_per_channel = channel * (magnitude_spectrum.dtype.itemsize)
+        qimage = QImage(magnitude_spectrum.data, width, height,
+                        bytes_per_channel * width, QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_rotated_spectrum_label.setPixmap(pixmap)
+
+        # phase of the inverted image
+        phase_spectrum = np.angle(fshift)
+        phase_spectrum = np.uint8(phase_spectrum)
+        phase_spectrum = cv.cvtColor(phase_spectrum, cv.COLOR_GRAY2RGB)
+        height, width, channel = phase_spectrum.shape
+        bytes_per_channel = channel * (phase_spectrum.dtype.itemsize)
+        qimage = QImage(phase_spectrum.data, width, height,
+                        bytes_per_channel * width, QImage.Format.Format_RGB888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.fft_rotated_phase_label.setPixmap(pixmap)
+
     def update_ancilliary_chunks(self):
         ancilliary = self.png_type.get_ancilliary_dict()
 
@@ -520,6 +583,8 @@ class MainWindow(QMainWindow):
             self.exif_field.setText('No eXIf chunk found')
         else:
             self.exif_field.setText(str(ancilliary['eXIf']))
+        if 'hIST' not in ancilliary.keys():
+            self.hist_field.setText('No hIST chunk found')
 
     def update_anomized_image(self):
         self.anomized = png.AnomizedPng(self.png_path)
