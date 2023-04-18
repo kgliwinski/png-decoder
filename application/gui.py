@@ -9,6 +9,7 @@ import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import PIL.Image
 # from os import listdir
 
 
@@ -45,7 +46,7 @@ class MainWindow(QMainWindow):
         self.create_ancilliary_chunks_tab()
         self.create_anomized_image_tab()
 
-        self.showMaximized()
+        self.showNormal()
 
     def create_ihdr_tab(self):
         # Create widgets
@@ -558,7 +559,8 @@ class MainWindow(QMainWindow):
 
     def update_ancilliary_chunks(self):
         ancilliary = self.png_type.get_ancilliary_dict()
-
+        pil_img = PIL.Image.open(self.png_path)
+        exif = self.png_type.get_exif()
         if 'gAMA' not in ancilliary.keys():
             self.gama_field.setText('No gAMA chunk found')
         else:
@@ -582,7 +584,7 @@ class MainWindow(QMainWindow):
         if 'eXIf' not in ancilliary.keys():
             self.exif_field.setText('No eXIf chunk found')
         else:
-            self.exif_field.setText(str(ancilliary['eXIf']))
+            self.exif_field.setText(str(ancilliary['eXIf']) + str(pil_img._getexif()))
         if 'hIST' not in ancilliary.keys():
             self.hist_field.setText('No hIST chunk found')
 

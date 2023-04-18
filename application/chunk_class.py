@@ -5,7 +5,6 @@ several "special" chunks
 import logging as log
 from typing import List, Dict, Tuple, Union
 
-
 class Chunk:
     """
     Class for representing base chunks in PNG format:
@@ -395,6 +394,7 @@ class eXIf(Chunk):
             return False
         print(
             f"Exif endian: {self.exif_endian_str}, Exif data: {self.exif_fourty_two}")
+
         return True
 
     def get_exif_data(self) -> dict:

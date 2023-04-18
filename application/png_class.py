@@ -259,6 +259,15 @@ class Png:
             log.info("No PLTE section in this image!")
             return None
         return self.chunks[index]
+    
+    def get_exif(self) -> chunk:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index("eXIf")
+        except:
+            log.info("No eXIf section in this image!")
+            return None
+        return self.chunks[index]
 
     def get_fourier_transform(self, tmp_name: str = ".tmp/temp", save: bool = False):
         """ Print FFT of an image (shows magnitude and phase)
