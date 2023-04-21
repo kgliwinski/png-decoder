@@ -313,6 +313,17 @@ class Png:
                 ancilliary_chunks.append(i)
                 log.info("Found ancilliary chunk: %s", i.get_chunk_type())
         return ancilliary_chunks
+    
+
+    def build_png_from_chunks(self, file_name: str) -> bool:
+        with open(file_name, 'wb') as f:
+            f.write(bytes(self.get_signature()))
+            log.info("Signature: %s", self.get_signature())
+            for i in self.chunks:
+                f.write(i.all_chunk_data_to_bytes())
+
+                # log.info("Chunk type: %s", i.get_chunk_type())
+        return True
 
 
 class AnomizedPng(Png):
@@ -360,16 +371,6 @@ class AnomizedPng(Png):
         self.chunks.pop(index)
         return True
 
-    def build_png_from_chunks(self, file_name: str) -> bool:
-        with open(file_name, 'wb') as f:
-            f.write(bytes(self.get_signature()))
-            log.info("Signature: %s", self.get_signature())
-            for i in self.chunks:
-                f.write(i.all_chunk_data_to_bytes())
-
-                # log.info("Chunk type: %s", i.get_chunk_type())
-        return True
-
     def get_deleted_chunks_number(self) -> int:
         return len(self.anomized_chunks)
 
@@ -378,3 +379,10 @@ class AnomizedPng(Png):
 
     def get_png_data_size(self) -> int:
         return super().get_png_data_size() - self.get_crc_saved_bytes()
+
+class EncryptedPng(Png):
+    def __init__(self, file_png_name: str):
+        super().__init__(file_png_name)
+    
+    def __str__(self) -> str:
+        return super().__str__() + "Encrypted PNG created"
