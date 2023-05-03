@@ -142,9 +142,16 @@ class Chunk:
 
 
 class IDAT(Chunk):
+    
     def __init__(self, file_ptr) -> None:
         pass
 
+    def encrypt_data_rsa2048(self, public_key: bytes) -> bool:
+        """
+        Encrypts the data of the chunk with RSA 2048
+        """
+        pass
+    
 
 class IHDR(Chunk):
     hdr_data = {

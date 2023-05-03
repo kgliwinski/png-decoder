@@ -386,3 +386,6 @@ class EncryptedPng(Png):
     
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
+    
+    def encrypt_rsa(self, public_key: str) -> bool:
+        pass
