@@ -66,6 +66,9 @@ class Png:
 
     def get_ancilliary_dict(self) -> dict:
         return self.ancilliary_dict
+    
+    def get_all_idat_chunks(self) -> list:
+        return [chunk for chunk in self.chunks if chunk.get_chunk_type() == 'IDAT']
 
     def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()

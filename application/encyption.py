@@ -1,26 +1,95 @@
 import numpy as np
 import sympy
 import random
-
+import png_class as png
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
-# https://pl.wikipedia.org/wiki/RSA_(kryptografia)
+# https://en.wikipedia.org/wiki/RSA_(cryptosystem)
 
 
 class EncryptionRSA2048:
-    def __init__(self):
-        self.p = sympy.randprime(2**1023, 2**1024-1)
-        self.q = sympy.nextprime(self.p)
-        self.n = self.p * self.q
-        self.phi = (self.p - 1) * (self.q - 1)
-        self.e = sympy.randprime(2**15, 2**16-1)
-        while sympy.gcd(self.e, self.phi) != 1 and self.e >= self.phi:
-            self.e = sympy.randprime(2**15, 2**16-1)
-        self.d = sympy.mod_inverse(self.e, self.phi)
+    def __init__(self, png_type : png.Png, public_key : tuple = None, private_key : tuple = None): 
+        """ 
+        # Chunk RSA2048 encryption
+        User can provide public_key and private_key or generate new ones.
+        ## Args:
+            - png_type (png.Png): png object
+            - public_key (tuple, optional): Defaults to None. (n, e)
+            - private_key (tuple, optional): Defaults to None. (n, d)
+        """        
+        if public_key is None:
+            p = sympy.randprime(2**1023, 2**1024-1)
+            q = sympy.nextprime(p)
+            n = p * q
+            phi = (p - 1) * (q - 1)
+            e = sympy.randprime(2**15, 2**16-1)
+            while sympy.gcd(e, phi) != 1 and e >= phi:
+                e = sympy.randprime(2**15, 2**16-1)
+            self.public_key = (n, e)
+        else:
+            self.public_key = public_key
+        
+        if private_key is None:
+            d = sympy.mod_inverse(e, phi)
+            self.private_key = (n, d)
+        else:
+            self.private_key = private_key
 
-        self.public_key = (self.n, self.e)
-        self.private_key = (self.n, self.d)
+        self.chunks_to_encrypt = png_type.get_all_idat_chunks()
     
     def get_public_key(self) -> tuple:
         return self.public_key
+    
+    def get_private_key(self) -> tuple:
+        return self.private_key
+    
+    def encrypt_chunk(self, chunk : bytes) -> bytes:
+        """ 
+        # Encrypt chunk
+        ## Args:
+            - chunk (bytes): chunk to encrypt
+        ## Returns:
+            - bytes: encrypted chunk
+        """        
+        chunk_int = int.from_bytes(chunk, byteorder='big')
+        encrypted_chunk_int = pow(chunk_int, self.public_key[1], self.public_key[0])
+        encrypted_chunk = encrypted_chunk_int.to_bytes(256, byteorder='big')
+        return encrypted_chunk
+
+    def encrypt_all_chunks(self) -> list:
+        """ 
+        # Encrypt all chunks
+        ## Returns:
+            - list: list of encrypted chunks
+        """        
+        encrypted_chunks = []
+        for chunk in self.chunks_to_encrypt:
+            encrypted_chunks.append(self.encrypt_chunk(chunk))
+        return encrypted_chunks
+    
+    def decrypt_chunk(self, chunk : bytes) -> bytes:
+        """ 
+        # Decrypt chunk
+        ## Args:
+            - chunk (bytes): chunk to decrypt
+        ## Returns:
+            - bytes: decrypted chunk
+        """        
+        chunk_int = int.from_bytes(chunk, byteorder='big')
+        decrypted_chunk_int = pow(chunk_int, self.private_key[1], self.private_key[0])
+        decrypted_chunk = decrypted_chunk_int.to_bytes(256, byteorder='big')
+        return decrypted_chunk
+    
+    def decrypt_all_chunks(self) -> list:
+        """ 
+        # Decrypt all chunks
+        ## Returns:
+            - list: list of decrypted chunks
+        """        
+        decrypted_chunks = []
+        for chunk in self.chunks_to_encrypt:
+            decrypted_chunks.append(self.decrypt_chunk(chunk))
+        return decrypted_chunks
+    
+    
     
