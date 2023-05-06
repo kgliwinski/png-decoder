@@ -1,14 +1,14 @@
 import numpy as np
 import sympy
 import random
-import png_class as png
+
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
+ 
 
-
-class EncryptionRSA2048:
-    def __init__(self, png_type : png.Png, public_key : tuple = None, private_key : tuple = None): 
+class rsa2048:
+    def __init__(self, chunks_to_encrypt : list, public_key : tuple = None, private_key : tuple = None): 
         """ 
         # Chunk RSA2048 encryption
         User can provide public_key and private_key or generate new ones.
@@ -35,12 +35,14 @@ class EncryptionRSA2048:
         else:
             self.private_key = private_key
 
-        self.chunks_to_encrypt = png_type.get_all_idat_chunks()
+        self.chunks_to_encrypt = chunks_to_encrypt
     
     def get_public_key(self) -> tuple:
+        """ Returns public key"""
         return self.public_key
     
     def get_private_key(self) -> tuple:
+        """ Returns private key"""
         return self.private_key
     
     def encrypt_chunk(self, chunk : bytes) -> bytes:
@@ -52,7 +54,7 @@ class EncryptionRSA2048:
             - bytes: encrypted chunk
         """        
         chunk_int = int.from_bytes(chunk, byteorder='big')
-        encrypted_chunk_int = pow(chunk_int, self.public_key[1], self.public_key[0])
+        encrypted_chunk_int : int = pow(chunk_int, self.public_key[1], self.public_key[0])
         encrypted_chunk = encrypted_chunk_int.to_bytes(256, byteorder='big')
         return encrypted_chunk
 
@@ -62,10 +64,10 @@ class EncryptionRSA2048:
         ## Returns:
             - list: list of encrypted chunks
         """        
-        encrypted_chunks = []
+        self.encrypted_chunks = []
         for chunk in self.chunks_to_encrypt:
-            encrypted_chunks.append(self.encrypt_chunk(chunk))
-        return encrypted_chunks
+            self.encrypted_chunks.append(self.encrypt_chunk(chunk))
+        return self.encrypted_chunks
     
     def decrypt_chunk(self, chunk : bytes) -> bytes:
         """ 
@@ -91,5 +93,11 @@ class EncryptionRSA2048:
             decrypted_chunks.append(self.decrypt_chunk(chunk))
         return decrypted_chunks
     
-    
+    def get_encrypted_chunks(self) -> list:
+        """ 
+        # Get all chunks
+        ## Returns:
+            - list: list of all chunks
+        """        
+        return self.encrypted_chunks
     

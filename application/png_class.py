@@ -8,7 +8,7 @@ import chunk_class as chunk
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2 as cv
-
+from encryption import rsa2048
 
 class Png:
     """
@@ -327,6 +327,12 @@ class Png:
 
                 # log.info("Chunk type: %s", i.get_chunk_type())
         return True
+    
+    def replace_idat_chunks(self, new_idat_chunks: list) -> bool:
+        chunk_types = self.get_chunk_types()
+        idat_index = chunk_types.index("IDAT")
+        self.chunks[idat_index] = new_idat_chunks
+        return True
 
 
 class AnomizedPng(Png):
@@ -386,9 +392,16 @@ class AnomizedPng(Png):
 class EncryptedPng(Png):
     def __init__(self, file_png_name: str):
         super().__init__(file_png_name)
-    
+        idat_chunks = self.get_all_idat_chunks()
+        idat_chunk_data_list = [i.get_chunk() for i in idat_chunks]
+        self.rsa_2048 = rsa2048(idat_chunk_data_list)
+        self.encrypt_rsa_2048()
+
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
     
-    def encrypt_rsa(self, public_key: str) -> bool:
-        pass
+    def encrypt_rsa_2048(self):
+        self.rsa_2048.encrypt_all_chunks()
+        self.encrypted_chunks = self.rsa_2048.get_encrypted_chunks()
+        self.replace_idat_chunks(self.encrypted_chunks)
+        self.build_png_from_chunks(".tmp/encrypted.png")
