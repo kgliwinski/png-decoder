@@ -1,7 +1,7 @@
 import numpy as np
 import sympy
 import random
-
+import chunk_class as chunk
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
@@ -45,7 +45,7 @@ class rsa2048:
         """ Returns private key"""
         return self.private_key
     
-    def encrypt_chunk(self, chunk : bytes) -> bytes:
+    def encrypt_chunk(self, chunk : chunk.Chunk) -> chunk.Chunk:
         """ 
         # Encrypt chunk
         ## Args:
@@ -53,10 +53,10 @@ class rsa2048:
         ## Returns:
             - bytes: encrypted chunk
         """        
-        chunk_int = int.from_bytes(chunk, byteorder='big')
+        chunk_int = int.from_bytes(chunk.get_chunk(), byteorder='big')
         encrypted_chunk_int : int = pow(chunk_int, self.public_key[1], self.public_key[0])
-        encrypted_chunk = encrypted_chunk_int.to_bytes(256, byteorder='big')
-        return encrypted_chunk
+        chunk.replace_chunk_data(encrypted_chunk_int.to_bytes(chunk.get_chunk_size(), byteorder='big'))
+        return chunk
 
     def encrypt_all_chunks(self) -> list:
         """ 
@@ -69,7 +69,7 @@ class rsa2048:
             self.encrypted_chunks.append(self.encrypt_chunk(chunk))
         return self.encrypted_chunks
     
-    def decrypt_chunk(self, chunk : bytes) -> bytes:
+    def decrypt_chunk(self, chunk : chunk.Chunk) -> chunk.Chunk:
         """ 
         # Decrypt chunk
         ## Args:
@@ -77,10 +77,10 @@ class rsa2048:
         ## Returns:
             - bytes: decrypted chunk
         """        
-        chunk_int = int.from_bytes(chunk, byteorder='big')
+        chunk_int = int.from_bytes(chunk.get_chunk(), byteorder='big')
         decrypted_chunk_int = pow(chunk_int, self.private_key[1], self.private_key[0])
-        decrypted_chunk = decrypted_chunk_int.to_bytes(256, byteorder='big')
-        return decrypted_chunk
+        chunk.replace_chunk_data(decrypted_chunk_int.to_bytes(256, byteorder='big'))
+        return chunk
     
     def decrypt_all_chunks(self) -> list:
         """ 

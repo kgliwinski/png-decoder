@@ -10,6 +10,7 @@ import numpy as np
 import cv2 as cv
 from encryption import rsa2048
 
+
 class Png:
     """
     Contains the PNG file signature and chunkss
@@ -66,7 +67,7 @@ class Png:
 
     def get_ancilliary_dict(self) -> dict:
         return self.ancilliary_dict
-    
+
     def get_all_idat_chunks(self) -> list:
         return [chunk for chunk in self.chunks if chunk.get_chunk_type() == 'IDAT']
 
@@ -156,7 +157,7 @@ class Png:
             log.info("bKGD chunk processing OK")
         self.ancilliary_dict['bKGD'] = self.chunks[index].get_bkgd_data()
         return True
-    
+
     def process_srgb(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -172,7 +173,7 @@ class Png:
             log.info("sRGB chunk processing OK")
         self.ancilliary_dict['sRGB'] = self.chunks[index].get_srgb_data()
         return True
-    
+
     def process_exif(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -204,7 +205,7 @@ class Png:
             log.info("hIST chunk processing OK")
         self.ancilliary_dict['hIST'] = self.chunks[index].get_hist_data()
         return True
-    
+
     def process_exif(self) -> bool:
         chunk_types = self.get_chunk_types()
         try:
@@ -316,7 +317,6 @@ class Png:
                 ancilliary_chunks.append(i)
                 log.info("Found ancilliary chunk: %s", i.get_chunk_type())
         return ancilliary_chunks
-    
 
     def build_png_from_chunks(self, file_name: str) -> bool:
         with open(file_name, 'wb') as f:
@@ -327,11 +327,20 @@ class Png:
 
                 # log.info("Chunk type: %s", i.get_chunk_type())
         return True
-    
-    def replace_idat_chunks(self, new_idat_chunks: list) -> bool:
+
+    def get_first_idat_chunk_index(self) -> int:
         chunk_types = self.get_chunk_types()
-        idat_index = chunk_types.index("IDAT")
-        self.chunks[idat_index] = new_idat_chunks
+        return chunk_types.index('IDAT')
+
+    def replace_idat_chunks(self, new_idat_chunks: list) -> bool:
+        """ Replaces IDAT chunks with new ones
+            If there are no IDAT chunks, adds them to the end of the image
+        """
+        iter = 0
+        for i in range(self.get_first_idat_chunk_index(), len(new_idat_chunks)):
+            self.chunks[i] = new_idat_chunks[iter]
+            iter += 1
+
         return True
 
 
@@ -389,19 +398,18 @@ class AnomizedPng(Png):
     def get_png_data_size(self) -> int:
         return super().get_png_data_size() - self.get_crc_saved_bytes()
 
+
 class EncryptedPng(Png):
     def __init__(self, file_png_name: str):
         super().__init__(file_png_name)
         idat_chunks = self.get_all_idat_chunks()
-        idat_chunk_data_list = [i.get_chunk() for i in idat_chunks]
-        self.rsa_2048 = rsa2048(idat_chunk_data_list)
+        self.rsa_2048 = rsa2048(idat_chunks)
         self.encrypt_rsa_2048()
 
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
-    
+
     def encrypt_rsa_2048(self):
         self.rsa_2048.encrypt_all_chunks()
         self.encrypted_chunks = self.rsa_2048.get_encrypted_chunks()
         self.replace_idat_chunks(self.encrypted_chunks)
-        self.build_png_from_chunks(".tmp/encrypted.png")

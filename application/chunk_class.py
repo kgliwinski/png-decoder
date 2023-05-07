@@ -139,6 +139,13 @@ class Chunk:
             return False
         self.crc32 = new_crc
         return True
+    
+    def replace_chunk_data(self, new_data : bytes) -> bool:
+        """
+        Replaces the current chunk data with a new one
+        """
+        self.chunk_data = new_data
+        return True
 
 
 class IDAT(Chunk):
