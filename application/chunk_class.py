@@ -145,18 +145,26 @@ class Chunk:
         Replaces the current chunk data with a new one
         """
         self.chunk_data = new_data
+        self.chunk_length = len(new_data)
+        self.raw_length = self.chunk_length.to_bytes(self.LENGTH_FIELD_LEN, 'big')
         return True
 
+# 0000001C  // byte length of IDAT chunk contents, 4 bytes, value 28
+# 49444154  // IDAT start - 4 bytes
+# 7801      // zlib Header                  2 bytes }
+# 01        // BFINAL = 1, BTYPE = 00       1 byte  }
+# 1100EEFF  // LEN & NLEN of data           4 bytes }
+# 00        // Filter = 0,                  1 byte  }
+# CC0000FF  // Pixel 1, Red-ish,            4 bytes }
+# 00CC00FF  // Pixel 2, Green-ish,          4 bytes }
+# 0000CCFF  // Pixel 3, Blue-ish,           4 bytes }
+# CCCCCCCC  // Pixel 4, transclucent grey,  4 bytes }
+# 3d3a0892  // Adler-32 check               4 bytes }
+# ba0400b4  // CRC of IDAT chunk, 4 bytes
 
 class IDAT(Chunk):
     
     def __init__(self, file_ptr) -> None:
-        pass
-
-    def encrypt_data_rsa2048(self, public_key: bytes) -> bool:
-        """
-        Encrypts the data of the chunk with RSA 2048
-        """
         pass
     
 

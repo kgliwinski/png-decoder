@@ -334,12 +334,15 @@ class Png:
 
     def replace_idat_chunks(self, new_idat_chunks: list) -> bool:
         """ Replaces IDAT chunks with new ones
-            If there are no IDAT chunks, adds them to the end of the image
+            If there are no IDAT chunks, returns false
         """
-        iter = 0
-        for i in range(self.get_first_idat_chunk_index(), len(new_idat_chunks)):
-            self.chunks[i] = new_idat_chunks[iter]
-            iter += 1
+        chunk_types = self.get_chunk_types()
+        if 'IDAT' in chunk_types:
+            first_idat_index = self.get_first_idat_chunk_index()
+            self.chunks = self.chunks[:first_idat_index] + \
+                new_idat_chunks + self.chunks[first_idat_index+len(new_idat_chunks):]
+        else:
+            return False
 
         return True
 
