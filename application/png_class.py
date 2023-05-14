@@ -29,6 +29,7 @@ class Png:
         self.read_signature()
         self.read_chunks()
         self.process_header()
+        self.process_idat()
         self.process_palette()
         self.process_ending()
         self.process_gama()
@@ -98,6 +99,15 @@ class Png:
         else:
             log.info("Palette chunk processing OK")
         return True
+
+    def process_idat(self) -> bool:
+        chunk_types = self.get_chunk_types()
+        for i, type in enumerate(chunk_types):
+            if type == 'IDAT':
+                self.chunks[i].divide_chunk_into_sections()
+        return True
+        
+
 
     def process_ending(self) -> bool:
         chunk_types = self.get_chunk_types()
@@ -413,6 +423,6 @@ class EncryptedPng(Png):
         return super().__str__() + "Encrypted PNG created"
 
     def encrypt_rsa_2048(self):
-        self.rsa_2048.encrypt_all_chunks()
+        self.rsa_2048.encrypt_all_chunks_ECB()
         self.encrypted_chunks = self.rsa_2048.get_encrypted_chunks()
         self.replace_idat_chunks(self.encrypted_chunks)

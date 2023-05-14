@@ -470,7 +470,7 @@ class MainWindow(QMainWindow):
 
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
-        print(self.png_path)
+        # print(self.png_path)
         # Load image with OpenCV
         image = cv.imread(self.png_path)
 
@@ -496,7 +496,7 @@ class MainWindow(QMainWindow):
     def load_image_values(self):
         try:
             self.png_type = png.Png(self.png_path)
-            print(self.png_type)
+            # print(self.png_type)
             self.png_input_label.setText("PNG path:")
             hdr = self.png_type.get_header()
             self.update_fields_from_header(hdr)

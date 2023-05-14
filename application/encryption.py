@@ -55,7 +55,40 @@ class rsa2048:
         """ Returns private key"""
         return self.private_key
 
-    def encrypt_chunk(self, chunk_to_encrypt: chunk.Chunk) -> chunk.Chunk:
+    # def encrypt_chunk(self, chunk_to_encrypt: chunk.IDAT) -> chunk.Chunk:
+    #     """ 
+    #     # Encrypt chunk
+    #     ## Args:
+    #         - chunk (bytes): chunk to encrypt
+    #     ## Returns:
+    #         - bytes: encrypted chunk
+    #     """
+    #     chunk_data = chunk_to_encrypt.get_idat_data()
+    #     # print(len(chunk_data))
+    #     # print(len(chunk_to_encrypt.get_chunk()))
+    #     # divide chunk into self.ENCRYPT_BLOCK_SIZE byte chunks
+    #     chunk_data_blocks = [chunk_data[i:i+self.ENCRYPT_BLOCK_SIZE]
+    #                          for i in range(0, len(chunk_data), self.ENCRYPT_BLOCK_SIZE)]
+    #     for i in chunk_data_blocks:
+    #         log.info(f'Chunk block: {len(i)}')
+    #     encrypted_chunk_data_blocks = b''
+    #     for chunk_block in chunk_data_blocks:
+    #         chunk_int = int.from_bytes(chunk_block, byteorder='big')
+    #         encrypted_chunk_int: int = pow(
+    #             chunk_int, self.public_key[1], self.public_key[0])
+    #         encrypted_chunk_data_blocks += encrypted_chunk_int.to_bytes(
+    #             self.ENCRYPT_BLOCK_SIZE, byteorder='big')
+    #         if len(chunk_block) < self.ENCRYPT_BLOCK_SIZE:
+    #             encrypted_chunk_data_blocks = encrypted_chunk_data_blocks[:-(
+    #                 self.ENCRYPT_BLOCK_SIZE - len(chunk_block))]
+    #         # log.info(f'Encrypted chunk: {encrypted_chunk_int}')
+    #     # print(len(chunk_data), len(encrypted_chunk_data_blocks))
+    #     chunk_to_encrypt.replace_idat_data(encrypted_chunk_data_blocks)
+    #     # print(len(chunk_to_encrypt.get_chunk()))
+    #     return chunk_to_encrypt
+
+    # encrypt chunk using the Electronic codebook (ECB) mode
+    def encrypt_chunk_ECB(self, chunk_to_encrypt: chunk.IDAT) -> chunk.IDAT:
         """ 
         # Encrypt chunk
         ## Args:
@@ -63,24 +96,25 @@ class rsa2048:
         ## Returns:
             - bytes: encrypted chunk
         """
-        chunk_data = chunk_to_encrypt.get_chunk()
-        # divide chunk into self.ENCRYPT_BLOCK_SIZE byte chunks
-        chunk_data_blocks = [chunk_data[i:i+self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
-                             for i in range(0, len(chunk_data), self.ENCRYPT_BLOCK_SIZE_SUBTRACT)]
-        for i in chunk_data_blocks:
-            log.info(f'Chunk block: {len(i)}')
-        encrypted_chunk_data_blocks = b''
-        for chunk_block in chunk_data_blocks:
-            chunk_int = int.from_bytes(chunk_block, byteorder='big')
-            encrypted_chunk_int: int = pow(
-                chunk_int, self.public_key[1], self.public_key[0])
-            encrypted_chunk_data_blocks += encrypted_chunk_int.to_bytes(
-                self.ENCRYPT_BLOCK_SIZE, byteorder='big')
-            # log.info(f'Encrypted chunk: {encrypted_chunk_int}')
-        chunk_to_encrypt.replace_chunk_data(encrypted_chunk_data_blocks)
-        return chunk_to_encrypt
+        data_to_encrypt = chunk_to_encrypt.get_idat_data()
 
-    def encrypt_all_chunks(self) -> list:
+        encrypted_data = b''
+
+        for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT):
+            data_to_encrypt_block = data_to_encrypt[i:i+self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
+            encrypted_int : int = pow(int.from_bytes(data_to_encrypt_block, byteorder='big'),
+                                self.public_key[1], self.public_key[0])
+            encrypted_block = encrypted_int.to_bytes(
+                self.ENCRYPT_BLOCK_SIZE, byteorder='big')
+            
+            for i in range(self.ENCRYPT_BLOCK_SIZE_SUBTRACT):
+                encrypted_data += encrypted_block[i]
+
+        chunk_to_encrypt.replace_idat_data(encrypted_data)
+        return chunk_to_encrypt
+            
+
+    def encrypt_all_chunks_ECB(self) -> list:
         """ 
         # Encrypt all chunks
         ## Returns:
@@ -88,7 +122,7 @@ class rsa2048:
         """
         self.encrypted_chunks = []
         for chunk in self.chunks_to_encrypt:
-            self.encrypted_chunks.append(self.encrypt_chunk(chunk))
+            self.encrypted_chunks.append(self.encrypt_chunk_ECB(chunk))
         return self.encrypted_chunks
 
     def decrypt_chunk(self, chunk: chunk.Chunk) -> chunk.Chunk:

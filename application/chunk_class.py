@@ -3,6 +3,7 @@ Contains the chunk class as well as child classes for
 several "special" chunks
 """
 import logging as log
+import zlib
 from typing import List, Dict, Tuple, Union
 
 
@@ -139,14 +140,15 @@ class Chunk:
             return False
         self.crc32 = new_crc
         return True
-    
-    def replace_chunk_data(self, new_data : bytes) -> bool:
+
+    def replace_chunk_data(self, new_data: bytes) -> bool:
         """
         Replaces the current chunk data with a new one
         """
         self.chunk_data = new_data
         self.chunk_length = len(new_data)
-        self.raw_length = self.chunk_length.to_bytes(self.LENGTH_FIELD_LEN, 'big')
+        self.raw_length = self.chunk_length.to_bytes(
+            self.LENGTH_FIELD_LEN, 'big')
         return True
 
 # 0000001C  // byte length of IDAT chunk contents, 4 bytes, value 28
@@ -162,11 +164,44 @@ class Chunk:
 # 3d3a0892  // Adler-32 check               4 bytes }
 # ba0400b4  // CRC of IDAT chunk, 4 bytes
 
+
 class IDAT(Chunk):
-    
+
     def __init__(self, file_ptr) -> None:
         pass
-    
+
+    def divide_chunk_into_sections(self):
+        self.zlib_header = self.chunk_data[0:2]
+        # print(self.zlib_header)
+        self.bfinal_btype = self.chunk_data[2:3]
+        self.len_nlen = self.chunk_data[3:7]
+        # print(self.len_nlen)
+        self.filter = self.chunk_data[7:8]
+        self.idat_data = self.chunk_data[8:-4]
+        self.adler32 = self.chunk_data[-4:]
+
+    def get_idat_data(self):
+        # print(len(self.idat_data))
+        return self.idat_data
+
+    def update_adler32(self):
+        self.adler32 = zlib.adler32(self.idat_data).to_bytes(4, 'big')
+        self.chunk_data = self.zlib_header + self.bfinal_btype + \
+            self.len_nlen + self.filter + self.idat_data + self.adler32
+
+    def replace_idat_data(self, new_idat_data: bytes):
+        self.idat_data = new_idat_data
+        self.update_adler32()
+        self.chunk_data = self.zlib_header + self.bfinal_btype + \
+            self.len_nlen + self.filter + self.idat_data + self.adler32
+
+    def update_len_and_nlen(self, new_length: int):
+        negated = (~new_length) & 0xFF
+        self.len_nlen = new_length.to_bytes(
+            2, 'big') + negated.to_bytes(2, 'big')
+        self.chunk_data = self.zlib_header + self.bfinal_btype + \
+            self.len_nlen + self.filter + self.idat_data + self.adler32
+
 
 class IHDR(Chunk):
     hdr_data = {
@@ -415,7 +450,7 @@ class eXIf(Chunk):
             log.error(
                 "ERROR: eXIF should have 42 as the next two bytes, but it has %d", self.exif_fourty_two)
             return False
-        print(
+        log.info(
             f"Exif endian: {self.exif_endian_str}, Exif data: {self.exif_fourty_two}")
         return True
 
