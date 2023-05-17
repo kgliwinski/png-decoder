@@ -3,6 +3,7 @@ import sympy
 import random
 import chunk_class as chunk
 import logging as log
+import zlib
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
@@ -46,6 +47,7 @@ class rsa2048:
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT = self.ENCRYPT_BLOCK_SIZE - 1
 
         self.chunks_to_encrypt = chunks_to_encrypt
+        self.encrypted_pixels = []
 
     def get_public_key(self) -> tuple:
         """ Returns public key"""
@@ -55,40 +57,12 @@ class rsa2048:
         """ Returns private key"""
         return self.private_key
 
-    # def encrypt_chunk(self, chunk_to_encrypt: chunk.IDAT) -> chunk.Chunk:
-    #     """ 
-    #     # Encrypt chunk
-    #     ## Args:
-    #         - chunk (bytes): chunk to encrypt
-    #     ## Returns:
-    #         - bytes: encrypted chunk
-    #     """
-    #     chunk_data = chunk_to_encrypt.get_idat_data()
-    #     # print(len(chunk_data))
-    #     # print(len(chunk_to_encrypt.get_chunk()))
-    #     # divide chunk into self.ENCRYPT_BLOCK_SIZE byte chunks
-    #     chunk_data_blocks = [chunk_data[i:i+self.ENCRYPT_BLOCK_SIZE]
-    #                          for i in range(0, len(chunk_data), self.ENCRYPT_BLOCK_SIZE)]
-    #     for i in chunk_data_blocks:
-    #         log.info(f'Chunk block: {len(i)}')
-    #     encrypted_chunk_data_blocks = b''
-    #     for chunk_block in chunk_data_blocks:
-    #         chunk_int = int.from_bytes(chunk_block, byteorder='big')
-    #         encrypted_chunk_int: int = pow(
-    #             chunk_int, self.public_key[1], self.public_key[0])
-    #         encrypted_chunk_data_blocks += encrypted_chunk_int.to_bytes(
-    #             self.ENCRYPT_BLOCK_SIZE, byteorder='big')
-    #         if len(chunk_block) < self.ENCRYPT_BLOCK_SIZE:
-    #             encrypted_chunk_data_blocks = encrypted_chunk_data_blocks[:-(
-    #                 self.ENCRYPT_BLOCK_SIZE - len(chunk_block))]
-    #         # log.info(f'Encrypted chunk: {encrypted_chunk_int}')
-    #     # print(len(chunk_data), len(encrypted_chunk_data_blocks))
-    #     chunk_to_encrypt.replace_idat_data(encrypted_chunk_data_blocks)
-    #     # print(len(chunk_to_encrypt.get_chunk()))
-    #     return chunk_to_encrypt
+    def get_encrypted_pixels(self) -> bytes:
+        """ Returns encrypted pixels"""
+        return self.encrypted_pixels
 
     # encrypt chunk using the Electronic codebook (ECB) mode
-    def encrypt_chunk_ECB(self, chunk_to_encrypt: chunk.IDAT) -> chunk.IDAT:
+    def encrypt_ECB(self, data_to_encrypt: bytes):
         """ 
         # Encrypt chunk
         ## Args:
@@ -96,34 +70,47 @@ class rsa2048:
         ## Returns:
             - bytes: encrypted chunk
         """
-        data_to_encrypt = chunk_to_encrypt.get_idat_data()
 
         encrypted_data = b''
+        extra_data = b''
 
-        for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT):
-            data_to_encrypt_block = data_to_encrypt[i:i+self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
-            encrypted_int : int = pow(int.from_bytes(data_to_encrypt_block, byteorder='big'),
-                                self.public_key[1], self.public_key[0])
+        data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
+                                  for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT)]
+
+        for data_to_encrypt_block in data_to_encrypt_blocks:
+            encrypted_int: int = pow(int.from_bytes(data_to_encrypt_block, byteorder='big'),
+                                     self.public_key[1], self.public_key[0])
             encrypted_block = encrypted_int.to_bytes(
                 self.ENCRYPT_BLOCK_SIZE, byteorder='big')
-            
-            for i in range(self.ENCRYPT_BLOCK_SIZE_SUBTRACT):
-                encrypted_data += encrypted_block[i]
 
-        chunk_to_encrypt.replace_idat_data(encrypted_data)
-        return chunk_to_encrypt
-            
+            encrypted_data += encrypted_block[0:
+                                              self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
+            extra_data += encrypted_block[self.ENCRYPT_BLOCK_SIZE_SUBTRACT:]
+            self.encrypted_pixels += encrypted_block[0:self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
+            # self.encrypted_pixels += encrypted_block[0:self.ENCRYPT_BLOCK_SIZE]
 
-    def encrypt_all_chunks_ECB(self) -> list:
+        # chunk_to_encrypt.replace_idat_data(encrypted_data)
+        return extra_data
+
+    def encrypt_all_chunks_ECB(self):
         """ 
         # Encrypt all chunks
         ## Returns:
             - list: list of encrypted chunks
         """
         self.encrypted_chunks = []
-        for chunk in self.chunks_to_encrypt:
-            self.encrypted_chunks.append(self.encrypt_chunk_ECB(chunk))
-        return self.encrypted_chunks
+        self.extra_bytes = b''
+
+        all_idat_data = b''
+        for chunk_to_encrypt in self.chunks_to_encrypt:
+            all_idat_data += chunk_to_encrypt.get_chunk()
+
+        data_to_encrypt = zlib.decompress(all_idat_data)
+
+        extra_bytes_part = self.encrypt_ECB(data_to_encrypt)
+        self.extra_bytes += extra_bytes_part
+        print(len(self.encrypted_pixels))
+        return self.encrypted_chunks, self.extra_bytes
 
     def decrypt_chunk(self, chunk: chunk.Chunk) -> chunk.Chunk:
         """ 
@@ -158,3 +145,11 @@ class rsa2048:
             - list: list of all chunks
         """
         return self.encrypted_chunks
+
+    def get_extra_bytes(self) -> bytes:
+        """ 
+        # Get extra data
+        ## Returns:
+            - bytes: extra data
+        """
+        return self.extra_bytes

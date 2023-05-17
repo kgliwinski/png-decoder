@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2 as cv
 from encryption import rsa2048
+import png
 
 
 class Png:
@@ -72,6 +73,9 @@ class Png:
     def get_all_idat_chunks(self) -> list:
         return [chunk for chunk in self.chunks if chunk.get_chunk_type() == 'IDAT']
 
+    def get_ihdr_chunk(self) -> chunk.Chunk:
+        return [chunk for chunk in self.chunks if chunk.get_chunk_type() == 'IHDR'][0]
+
     def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()
         index = chunk_types.index("IHDR")
@@ -106,8 +110,6 @@ class Png:
             if type == 'IDAT':
                 self.chunks[i].divide_chunk_into_sections()
         return True
-        
-
 
     def process_ending(self) -> bool:
         chunk_types = self.get_chunk_types()
@@ -350,7 +352,8 @@ class Png:
         if 'IDAT' in chunk_types:
             first_idat_index = self.get_first_idat_chunk_index()
             self.chunks = self.chunks[:first_idat_index] + \
-                new_idat_chunks + self.chunks[first_idat_index+len(new_idat_chunks):]
+                new_idat_chunks + \
+                self.chunks[first_idat_index+len(new_idat_chunks):]
         else:
             return False
 
@@ -418,11 +421,73 @@ class EncryptedPng(Png):
         idat_chunks = self.get_all_idat_chunks()
         self.rsa_2048 = rsa2048(idat_chunks)
         self.encrypt_rsa_2048()
+        self.build_png_from_chunks(".tmp/encrypted.png")
 
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
 
     def encrypt_rsa_2048(self):
         self.rsa_2048.encrypt_all_chunks_ECB()
-        self.encrypted_chunks = self.rsa_2048.get_encrypted_chunks()
-        self.replace_idat_chunks(self.encrypted_chunks)
+        self.replace_idat_chunks(self.rsa_2048.get_encrypted_chunks())
+        self.after_iend_data = self.rsa_2048.get_extra_bytes()
+
+    def build_png_from_chunks(self, file_name: str) -> bool:
+        writer = self.get_png_writer()
+        row_width = self.get_width() * self.calculate_bytes_per_pixel()
+        print(self.get_width(), self.get_height())
+        pixels = self.rsa_2048.get_encrypted_pixels()
+        pixels_by_rows = [pixels[i:i+row_width]
+                          for i in range(0, len(pixels), row_width)]
+        for row in pixels_by_rows:
+            if len(row) < row_width:
+                row.extend([0]*(row_width-len(row)))
+        # print(type(pixels_by_rows[0]))
+        with open(file_name, 'wb') as f:
+            try:
+                writer.write(f, pixels_by_rows)
+            except:
+                log.error("Small error", file_name)
+        return True
+
+    def get_png_writer(self) -> png.Writer:
+        bytes_per_pixel = self.calculate_bytes_per_pixel()
+        bit_depth = self.get_bit_depth()
+        if bytes_per_pixel == 1:
+            png_writer = png.Writer(
+                self.get_width(), self.get_height(), greyscale=True, bitdepth=bit_depth)
+        elif bytes_per_pixel == 2:
+            png_writer = png.Writer(
+                self.get_width(), self.get_height(), greyscale=True, alpha=True, bitdepth=bit_depth)
+        elif bytes_per_pixel == 3:
+            png_writer = png.Writer(
+                self.get_width(), self.get_height(), greyscale=False, bitdepth=bit_depth)
+        elif bytes_per_pixel == 4:
+            png_writer = png.Writer(self.get_width(), self.get_height(),
+                                    greyscale=False, alpha=True, bitdepth=bit_depth)
+        else:
+            png_writer = png.Writer(self.get_width(), self.get_height(),
+                                    greyscale=False, alpha=True, bitdepth=bit_depth)
+        return png_writer
+
+    def get_bit_depth(self):
+        # get the bit_depth from ihdr chunk
+        return self.get_ihdr_chunk().get_hdr_data()["bit_depth"]
+
+    def get_color_type(self):
+        return self.get_ihdr_chunk().get_hdr_data()["color_type"]
+
+    def get_width(self):
+        return self.get_ihdr_chunk().get_hdr_data()["width"]
+
+    def get_height(self):
+        return self.get_ihdr_chunk().get_hdr_data()["height"]
+
+    def calculate_bytes_per_pixel(self):
+        color_type_to_bytes_per_pixel_ratio = {
+            0: 1,
+            2: 3,
+            3: 1,
+            4: 2,
+            6: 4
+        }
+        return color_type_to_bytes_per_pixel_ratio[self.get_color_type()]

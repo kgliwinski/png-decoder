@@ -191,7 +191,7 @@ class IDAT(Chunk):
 
     def replace_idat_data(self, new_idat_data: bytes):
         self.idat_data = new_idat_data
-        self.update_adler32()
+        # self.update_adler32()
         self.chunk_data = self.zlib_header + self.bfinal_btype + \
             self.len_nlen + self.filter + self.idat_data + self.adler32
 
