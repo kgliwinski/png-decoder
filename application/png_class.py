@@ -10,6 +10,7 @@ import numpy as np
 import cv2 as cv
 from encryption import rsa2048
 import png
+import zlib
 
 
 class Png:
@@ -421,32 +422,43 @@ class EncryptedPng(Png):
         idat_chunks = self.get_all_idat_chunks()
         self.rsa_2048 = rsa2048(idat_chunks)
         self.encrypt_rsa_2048()
-        self.build_png_from_chunks(".tmp/encrypted.png")
+        self.build_png_from_chunks(
+            ".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels())
 
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
 
     def encrypt_rsa_2048(self):
-        self.rsa_2048.encrypt_all_chunks_ECB()
-        self.replace_idat_chunks(self.rsa_2048.get_encrypted_chunks())
+        data_to_encrypt = self.get_and_prepare_data_to_encrypt()
+        self.rsa_2048.encrypt_all_data_ECB(data_to_encrypt)
+        # self.replace_idat_chunks(self.rsa_2048.get_encrypted_chunks())
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
 
-    def build_png_from_chunks(self, file_name: str) -> bool:
+    def decrypt_rsa_2048(self):
+        png_to_decrypt = Png(".tmp/encrypted.png")
+        chunks_to_decrypt = png_to_decrypt.get_all_idat_chunks()
+        self.rsa_2048.decrypt_all_chunks_ECB(chunks_to_decrypt)
+        self.replace_idat_chunks(self.rsa_2048.get_decrypted_chunks())
+        self.build_png_from_chunks(
+            ".tmp/decrypted.png", pixels=self.rsa_2048.get_decrypted_pixels())
+
+    def build_png_from_chunks(self, file_name: str, pixels) -> bool:
         writer = self.get_png_writer()
         row_width = self.get_width() * self.calculate_bytes_per_pixel()
         print(self.get_width(), self.get_height())
-        pixels = self.rsa_2048.get_encrypted_pixels()
         pixels_by_rows = [pixels[i:i+row_width]
                           for i in range(0, len(pixels), row_width)]
+        print(type(pixels_by_rows))
         for row in pixels_by_rows:
-            if len(row) < row_width:
+            if len(row) < row_width and type(row) == list:
                 row.extend([0]*(row_width-len(row)))
         # print(type(pixels_by_rows[0]))
         with open(file_name, 'wb') as f:
-            try:
-                writer.write(f, pixels_by_rows)
-            except:
-                log.error("Small error", file_name)
+            # try:
+            writer.write(f, pixels_by_rows)
+            f.write(self.after_iend_data)
+            # except:
+            # log.error("Small error")
         return True
 
     def get_png_writer(self) -> png.Writer:
@@ -491,3 +503,77 @@ class EncryptedPng(Png):
             6: 4
         }
         return color_type_to_bytes_per_pixel_ratio[self.get_color_type()]
+
+    def get_and_prepare_data_to_encrypt(self):
+        all_idat_data = b''
+        for chunk_to_encrypt in self.get_all_idat_chunks():
+            all_idat_data += chunk_to_encrypt.get_chunk()
+        bytes_per_pixel = self.calculate_bytes_per_pixel()
+        width = self.get_width()
+        height = self.get_height()
+        
+        all_idat_data = zlib.decompress(all_idat_data)
+        assert len(all_idat_data) == height * (1 + width * bytes_per_pixel) , "Corrupted data"
+
+        return self.defilter_data(all_idat_data)
+
+    def defilter_data(self, data_to_defilter: bytes):
+        bytes_per_pixel = self.calculate_bytes_per_pixel()
+        width = self.get_width()
+        height = self.get_height()
+        stride = width * bytes_per_pixel
+
+        reconstructed_idat_data = b''
+
+        def paeth_predictor(a, b, c):
+            """The Paeth Predictor computes a simple linear function of the three neighboring pixels (left, above, upper left),
+            then chooses as predictor the neighboring pixel closest to the computed value.
+            This technique is due to Alan W. Paeth [1]."""
+            p = a + b - c
+            pa = abs(p - a)
+            pb = abs(p - b)
+            pc = abs(p - c)
+            if pa <= pb and pa <= pc:
+                Pr = a
+            elif pb <= pc:
+                Pr = b
+            else:
+                Pr = c
+            return Pr
+
+        def recon_a(r, c):
+            return reconstructed_idat_data[r * stride + c - bytes_per_pixel] if c >= bytes_per_pixel else 0
+
+        def recon_b(r, c):
+            return reconstructed_idat_data[(r-1) * stride + c] if r > 0 else 0
+
+        def recon_c(r, c):
+            return reconstructed_idat_data[(r-1) * stride + c - bytes_per_pixel] if r > 0 and c >= bytes_per_pixel else 0
+
+        
+        i = 0
+        print(stride * height, len(data_to_defilter))
+        for r in range(height):
+            filter_type = data_to_defilter[i]
+            i += 1
+            for c in range(stride):
+                filt_x = data_to_defilter[i]
+                i += 1
+                if filter_type == 0:  # None
+                    recon_x = filt_x
+                elif filter_type == 1:  # Sub
+                    recon_x = filt_x + recon_a(r, c)
+                elif filter_type == 2:  # Up
+                    recon_x = filt_x + recon_b(r, c)
+                elif filter_type == 3:  # Average
+                    recon_x = filt_x + (recon_a(r, c) + recon_b(r, c)) // 2
+                elif filter_type == 4:  # Paeth
+                    recon_x = filt_x + \
+                        paeth_predictor(
+                            recon_a(r, c), recon_b(r, c), recon_c(r, c))
+                else:
+                    print(filter_type)
+                    raise Exception('Invalid filter type')
+                reconstructed_idat_data += bytes([recon_x & 0xFF])
+                # print(i)
+        return reconstructed_idat_data

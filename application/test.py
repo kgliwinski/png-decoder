@@ -8,11 +8,13 @@ cat = png.Png('pictures/cat.png')
 # print(cat.get_chunk_types())
 
 
-encrypted = png.EncryptedPng('pictures/spiderman.png')
-
+encrypted = png.EncryptedPng('pictures/dice.png')
+# decrypted = encrypted.decrypt_rsa_2048()
 # print(encrypted.get_chunk_types(), original.get_chunk_types())
-img = cv.imread('.tmp/encrypted.png')
-cv.imshow('Encrypted', img)
+enc = cv.imread('.tmp/encrypted.png')
+# dec = cv.imread('.tmp/decrypted.png')
+cv.imshow('Encrypted', enc)
+# cv.imshow('Decrypted', dec)
 
 cv.waitKey(0)
 
