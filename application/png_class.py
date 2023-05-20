@@ -30,6 +30,7 @@ class Png:
         self.ancilliary_dict = {}
         self.read_signature()
         self.read_chunks()
+        self.read_after_iend_data()
         self.process_header()
         self.process_idat()
         self.process_palette()
@@ -61,6 +62,13 @@ class Png:
         while self.file_png.peek() != b'':
             tmp = chunk.Chunk(self.file_png)
             self.chunks.append(tmp)
+            if tmp.get_chunk_type() == 'IEND':
+                break
+
+    def read_after_iend_data(self):
+        self.after_iend_data = b''
+        while self.file_png.peek() != b'':
+            self.after_iend_data += self.file_png.read(1)
 
     def get_signature(self) -> bytes:
         return self.signature
@@ -76,6 +84,9 @@ class Png:
 
     def get_ihdr_chunk(self) -> chunk.Chunk:
         return [chunk for chunk in self.chunks if chunk.get_chunk_type() == 'IHDR'][0]
+
+    def get_after_iend_data(self) -> bytes:
+        return self.after_iend_data
 
     def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()
@@ -417,48 +428,46 @@ class AnomizedPng(Png):
 
 
 class EncryptedPng(Png):
-    def __init__(self, file_png_name: str):
+    def __init__(self, file_png_name: str, public_key = None, private_key = None):
         super().__init__(file_png_name)
         idat_chunks = self.get_all_idat_chunks()
-        self.rsa_2048 = rsa2048(idat_chunks)
-        self.encrypt_rsa_2048()
-        self.build_png_from_chunks(
-            ".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels())
+        self.rsa_2048 = rsa2048(idat_chunks, public_key=public_key, private_key=private_key)
+        # self.encrypt_rsa_2048()
+        # self.build_png_from_chunks(
+        # ".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels())
 
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
 
     def encrypt_rsa_2048(self):
-        data_to_encrypt = self.get_and_prepare_data_to_encrypt()
+        data_to_encrypt = self.get_and_prepare_data_to_process()
         self.rsa_2048.encrypt_all_data_ECB(data_to_encrypt)
-        # self.replace_idat_chunks(self.rsa_2048.get_encrypted_chunks())
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
+        self.build_png_from_chunks(".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels(),
+                                   after_iend_data=self.rsa_2048.get_extra_bytes())
+        return self.rsa_2048.get_private_key()
 
     def decrypt_rsa_2048(self):
-        png_to_decrypt = Png(".tmp/encrypted.png")
-        chunks_to_decrypt = png_to_decrypt.get_all_idat_chunks()
-        self.rsa_2048.decrypt_all_chunks_ECB(chunks_to_decrypt)
+        extra_data = self.get_after_iend_data()
+        data_to_decrypt = self.get_and_prepare_data_to_process()
+        self.rsa_2048.decrypt_all_data_ECB(data_to_decrypt, extra_data)
         self.replace_idat_chunks(self.rsa_2048.get_decrypted_chunks())
         self.build_png_from_chunks(
-            ".tmp/decrypted.png", pixels=self.rsa_2048.get_decrypted_pixels())
+            ".tmp/decrypted.png", pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
 
-    def build_png_from_chunks(self, file_name: str, pixels) -> bool:
+    def build_png_from_chunks(self, file_name: str, pixels, after_iend_data) -> bool:
         writer = self.get_png_writer()
-        row_width = self.get_width() * self.calculate_bytes_per_pixel()
         print(self.get_width(), self.get_height())
+        row_width = self.get_width() * self.calculate_bytes_per_pixel()
         pixels_by_rows = [pixels[i:i+row_width]
                           for i in range(0, len(pixels), row_width)]
-        print(type(pixels_by_rows))
         for row in pixels_by_rows:
             if len(row) < row_width and type(row) == list:
                 row.extend([0]*(row_width-len(row)))
-        # print(type(pixels_by_rows[0]))
         with open(file_name, 'wb') as f:
-            # try:
             writer.write(f, pixels_by_rows)
-            f.write(self.after_iend_data)
-            # except:
-            # log.error("Small error")
+            # write after iend data as well
+            f.write(after_iend_data)
         return True
 
     def get_png_writer(self) -> png.Writer:
@@ -504,16 +513,17 @@ class EncryptedPng(Png):
         }
         return color_type_to_bytes_per_pixel_ratio[self.get_color_type()]
 
-    def get_and_prepare_data_to_encrypt(self):
+    def get_and_prepare_data_to_process(self):
         all_idat_data = b''
         for chunk_to_encrypt in self.get_all_idat_chunks():
             all_idat_data += chunk_to_encrypt.get_chunk()
         bytes_per_pixel = self.calculate_bytes_per_pixel()
         width = self.get_width()
         height = self.get_height()
-        
+
         all_idat_data = zlib.decompress(all_idat_data)
-        assert len(all_idat_data) == height * (1 + width * bytes_per_pixel) , "Corrupted data"
+        assert len(all_idat_data) == height * \
+            (1 + width * bytes_per_pixel), "Corrupted data"
 
         return self.defilter_data(all_idat_data)
 
@@ -550,9 +560,8 @@ class EncryptedPng(Png):
         def recon_c(r, c):
             return reconstructed_idat_data[(r-1) * stride + c - bytes_per_pixel] if r > 0 and c >= bytes_per_pixel else 0
 
-        
         i = 0
-        print(stride * height, len(data_to_defilter))
+        # print(stride * height, len(data_to_defilter))
         for r in range(height):
             filter_type = data_to_defilter[i]
             i += 1
@@ -572,7 +581,7 @@ class EncryptedPng(Png):
                         paeth_predictor(
                             recon_a(r, c), recon_b(r, c), recon_c(r, c))
                 else:
-                    print(filter_type)
+                    log.error(filter_type)
                     raise Exception('Invalid filter type')
                 reconstructed_idat_data += bytes([recon_x & 0xFF])
                 # print(i)

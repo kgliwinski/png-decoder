@@ -29,9 +29,9 @@ class rsa2048:
                 q = sympy.randprime(2**(prime_size - 1), 2**prime_size-1)
             n = p * q
             phi = (p - 1) * (q - 1)
-            e = sympy.randprime(2**15, 2**16-1)
+            e = sympy.randprime(2**(self.key_size - 1), 2**self.key_size)
             while sympy.gcd(e, phi) != 1 and e >= phi:
-                e = sympy.randprime(2**15, 2**16-1)
+                e = sympy.randprime(2**(self.key_size - 1), 2**self.key_size)
             self.public_key = (n, e)
         else:
             self.public_key = public_key
@@ -47,6 +47,7 @@ class rsa2048:
 
         self.chunks_to_encrypt = chunks_to_encrypt
         self.encrypted_pixels = []
+        self.extra_bytes = b''
 
     def get_public_key(self) -> tuple:
         """ Returns public key"""
@@ -87,8 +88,9 @@ class rsa2048:
                 self.ENCRYPT_BLOCK_SIZE, byteorder='big')
 
             if len(data_to_encrypt_block) < self.ENCRYPT_BLOCK_SIZE_SUBTRACT:
-                self.encrypted_pixels += encrypted_block[0:len(data_to_encrypt_block)]
-                self.extra_bytes += encrypted_block[len(data_to_encrypt_block):]
+                self.encrypted_pixels += encrypted_block[0:len(
+                    data_to_encrypt_block)]
+                # self.extra_bytes += encrypted_block[len(data_to_encrypt_block):]
             else:
                 self.encrypted_pixels += encrypted_block[0:
                                                          self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
@@ -106,9 +108,9 @@ class rsa2048:
         self.extra_bytes = b''
         self.encrypted_pixels = []
 
-        extra_bytes_part = self.encrypt_ECB(data_to_encrypt)
-        self.extra_bytes += extra_bytes_part
-        print(len(self.encrypted_pixels))
+        self.extra_bytes = self.encrypt_ECB(data_to_encrypt)
+        # print(self.extra_bytes)
+        # print(len(self.encrypted_pixels))
         return self.encrypted_chunks, self.extra_bytes
 
     def decrypt_ECB(self, data_to_decrypt: bytes):
@@ -120,27 +122,26 @@ class rsa2048:
             - bytes: decrypted chunk
         """
         decrypted_data = b''
-        data_to_decrypt_joined = b''
-        for i in range(0, len(data_to_decrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT):
-            data_to_decrypt_joined += data_to_decrypt[i:i +
-                                                      self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
-            data_to_decrypt_joined += self.extra_bytes[i:i + 1]
-        data_to_decrypt_blocks = [data_to_decrypt_joined[i:i + self.ENCRYPT_BLOCK_SIZE]
+
+        data_to_decrypt_blocks = [data_to_decrypt[i:i + self.ENCRYPT_BLOCK_SIZE]
                                   for i in range(0, len(data_to_decrypt), self.ENCRYPT_BLOCK_SIZE)]
 
-        p = 0
+        print(len(data_to_decrypt_blocks))
         for data_to_decrypt_block in data_to_decrypt_blocks:
             decrypted_int: int = pow(int.from_bytes(data_to_decrypt_block, byteorder='big'),
                                      self.private_key[1], self.private_key[0])
-            decrypted_block = decrypted_int.to_bytes(
-                self.ENCRYPT_BLOCK_SIZE, byteorder='big')
-            decrypted_data += decrypted_block[0:len(decrypted_block)]
-            p += 1
-            print(p)
-        self.extra_bytes = b''
+
+            if (len(data_to_decrypt_block) < self.ENCRYPT_BLOCK_SIZE):
+                decrypted_data += decrypted_int.to_bytes(
+                    len(data_to_decrypt_block), byteorder='big')
+            else:
+                decrypted_block = decrypted_int.to_bytes(
+                    self.ENCRYPT_BLOCK_SIZE_SUBTRACT, byteorder='big')
+                decrypted_data += decrypted_block
+
         return decrypted_data
 
-    def decrypt_all_data_ECB(self, chunks_to_decrypt: bytes):
+    def decrypt_all_data_ECB(self, data_to_decrypt: bytes, extra_data: bytes):
         """ 
         # Decrypt all chunks
         ## Args:
@@ -151,12 +152,20 @@ class rsa2048:
         self.decrypted_chunks = []
         self.decrypted_pixels = []
 
-        all_idat_data = b''
-        for chunk_to_decrypt in chunks_to_decrypt:
-            all_idat_data += chunk_to_decrypt.get_chunk()
+        # insert extra data[i] to every ENCRYPT_BLOCK_SIZE_SUBTRACT byte
+        data_to_decrypt_joined = b''
+        # extra data not read
+        for j, i in enumerate(range(0, len(data_to_decrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT)):
+            if j < len(extra_data):
+                data_to_decrypt_joined += data_to_decrypt[i:i +
+                                                          self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
+                data_to_decrypt_joined += extra_data[j:j+1]
+            else:
+                data_to_decrypt_joined += data_to_decrypt[i:i +
+                                                          self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
 
         # data_to_decrypt = zlib.decompress(all_idat_data)
-        self.decrypted_pixels = self.decrypt_ECB(chunks_to_decrypt)
+        self.decrypted_pixels = self.decrypt_ECB(data_to_decrypt_joined)
 
         return self.decrypted_pixels
 
@@ -182,4 +191,5 @@ class rsa2048:
         ## Returns:
             - bytes: extra data
         """
+        # print(self.extra_bytes)
         return self.extra_bytes
