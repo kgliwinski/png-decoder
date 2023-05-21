@@ -20,10 +20,10 @@ cat = png.Png('pictures/cat.png')
 # cv.imshow('Decrypted', dec)
 
 encrypted_cfb = png.EncryptedPng('pictures/dice.png')
-iv = encrypted_cfb.encrypt_decrypt_cfb('.tmp/encrypted_cfb.png')
+iv = encrypted_cfb.encrypt_cfb('.tmp/encrypted_cfb.png')
 
 decrypted_cfb = png.EncryptedPng('.tmp/encrypted_cfb.png')
-decrypted_cfb.encrypt_decrypt_cfb('.tmp/decrypted_cfb.png', iv)
+decrypted_cfb.decrypt_cfb('.tmp/decrypted_cfb.png', iv)
 
 enc = cv.imread('.tmp/encrypted_cfb.png')
 dec = cv.imread('.tmp/decrypted_cfb.png')

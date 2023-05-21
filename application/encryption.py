@@ -180,7 +180,7 @@ class rsa2048:
             encrypted_block += bytes([data_to_encrypt_block[i] ^ iv[i]])
         return encrypted_block
 
-    def encrypt_decrypt_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
+    def encrypt_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
         """
         Output feedback encryption
         """
@@ -204,7 +204,7 @@ class rsa2048:
         
         return original_iv, self.encrypted_pixels
     
-    def encrypt_decrypt_all_data_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
+    def encrypt_all_data_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
         """ 
         # Encrypt all chunks
         ## Returns:
@@ -214,10 +214,41 @@ class rsa2048:
         self.extra_bytes = b''
         self.encrypted_pixels = []
 
-        iv, self.encrypted_pixels = self.encrypt_decrypt_CFB(data_to_encrypt, iv)
+        iv, self.encrypted_pixels = self.encrypt_CFB(data_to_encrypt, iv)
         # print(self.extra_bytes)
         # print(len(self.encrypted_pixels))
         return iv, self.encrypted_pixels
+    
+    def decrypt_block_CFB(self, encrypted_block, iv):
+        """
+        Decrypt a single block using CFB mode
+        """
+        decrypted_block = b''
+        for i in range(len(encrypted_block)):
+            decrypted_byte = encrypted_block[i] ^ iv[i]
+            decrypted_block += bytes([decrypted_byte])
+            
+        iv = decrypted_block  # Update IV for next iteration
+        return decrypted_block
+
+
+    def decrypt_all_data_CFB(self, encrypted_data, iv):
+        """
+        Decrypt all blocks of encrypted data using CFB mode
+        """
+        decrypted_data = b''
+
+        # Divide encrypted data into blocks
+        encrypted_blocks = [encrypted_data[i:i + self.ENCRYPT_BLOCK_SIZE_CFB]
+                            for i in range(0, len(encrypted_data), self.ENCRYPT_BLOCK_SIZE_CFB)]
+
+        # Decrypt blocks
+        for encrypted_block in encrypted_blocks:
+            decrypted_block = self.decrypt_block_CFB(encrypted_block, iv)
+            decrypted_data += decrypted_block
+            iv = encrypted_block  # Use the encrypted block as IV for the next iteration
+
+        return decrypted_data
 
 
     def get_encrypted_chunks(self) -> list:

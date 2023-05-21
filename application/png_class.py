@@ -455,13 +455,21 @@ class EncryptedPng(Png):
         self.build_png_from_chunks(
             png_path_str, pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
         
-    def encrypt_decrypt_cfb(self, png_path_str : str, iv : bytes = None):
+    def encrypt_cfb(self, png_path_str : str, iv : bytes = None):
         data_to_encrypt = self.get_and_prepare_data_to_process()
-        iv, _ = self.rsa_2048.encrypt_decrypt_all_data_CFB(data_to_encrypt, iv)
+        iv, _ = self.rsa_2048.encrypt_all_data_CFB(data_to_encrypt, iv)
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
         self.build_png_from_chunks(png_path_str, pixels=self.rsa_2048.get_encrypted_pixels(),
                                    after_iend_data=self.rsa_2048.get_extra_bytes())
         return iv
+    
+    def decrypt_cfb(self, png_path_str : str, iv : bytes):
+        extra_data = self.get_after_iend_data()
+        data_to_decrypt = self.get_and_prepare_data_to_process()
+        decrypted_pixels = self.rsa_2048.decrypt_all_data_CFB(data_to_decrypt, iv)
+        # self.replace_idat_chunks(self.rsa_2048.get_decrypted_chunks())
+        self.build_png_from_chunks(
+            png_path_str, pixels=decrypted_pixels, after_iend_data=b'')
 
     def build_png_from_chunks(self, file_name: str, pixels, after_iend_data) -> bool:
         writer = self.get_png_writer()
