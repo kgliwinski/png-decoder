@@ -455,9 +455,9 @@ class EncryptedPng(Png):
         self.build_png_from_chunks(
             png_path_str, pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
         
-    def encrypt_decrypt_ofb(self, png_path_str : str, iv : bytes = None):
+    def encrypt_decrypt_cfb(self, png_path_str : str, iv : bytes = None):
         data_to_encrypt = self.get_and_prepare_data_to_process()
-        iv, _ = self.rsa_2048.encrypt_decrypt_all_data_OFB(data_to_encrypt, iv)
+        iv, _ = self.rsa_2048.encrypt_decrypt_all_data_CFB(data_to_encrypt, iv)
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
         self.build_png_from_chunks(png_path_str, pixels=self.rsa_2048.get_encrypted_pixels(),
                                    after_iend_data=self.rsa_2048.get_extra_bytes())

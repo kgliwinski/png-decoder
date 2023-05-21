@@ -45,7 +45,7 @@ class rsa2048:
 
         self.ENCRYPT_BLOCK_SIZE = self.key_size // 8
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT = self.ENCRYPT_BLOCK_SIZE - 1
-        self.ENCRYPT_BLOCK_SIZE_OFB = 16
+        self.ENCRYPT_BLOCK_SIZE_CFB = 16
 
         self.chunks_to_encrypt = chunks_to_encrypt
         self.encrypted_pixels = []
@@ -171,7 +171,7 @@ class rsa2048:
 
         return self.decrypted_pixels
 
-    def encrypt_block_OFB(self, data_to_encrypt_block, iv):
+    def encrypt_block_CFB(self, data_to_encrypt_block, iv):
         """
         Output feedback encryption
         """
@@ -180,17 +180,17 @@ class rsa2048:
             encrypted_block += bytes([data_to_encrypt_block[i] ^ iv[i]])
         return encrypted_block
 
-    def encrypt_decrypt_OFB(self, data_to_encrypt: bytes, iv: bytes = None):
+    def encrypt_decrypt_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
         """
         Output feedback encryption
         """
         # divide data into blocks
-        data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_OFB]
-                                    for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_OFB)]
+        data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_CFB]
+                                    for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_CFB)]
         
         # generate random IV
         if iv is None:
-            iv = os.urandom(self.ENCRYPT_BLOCK_SIZE_OFB)
+            iv = os.urandom(self.ENCRYPT_BLOCK_SIZE_CFB)
 
         original_iv = iv
         
@@ -198,13 +198,13 @@ class rsa2048:
 
         # encrypt blocks
         for data_to_encrypt_block in data_to_encrypt_blocks:
-            encrypted_block = self.encrypt_block_OFB(data_to_encrypt_block, iv)
+            encrypted_block = self.encrypt_block_CFB(data_to_encrypt_block, iv)
             self.encrypted_pixels += encrypted_block
             iv = encrypted_block
         
         return original_iv, self.encrypted_pixels
     
-    def encrypt_decrypt_all_data_OFB(self, data_to_encrypt: bytes, iv: bytes = None):
+    def encrypt_decrypt_all_data_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
         """ 
         # Encrypt all chunks
         ## Returns:
@@ -214,7 +214,7 @@ class rsa2048:
         self.extra_bytes = b''
         self.encrypted_pixels = []
 
-        iv, self.encrypted_pixels = self.encrypt_decrypt_OFB(data_to_encrypt, iv)
+        iv, self.encrypted_pixels = self.encrypt_decrypt_CFB(data_to_encrypt, iv)
         # print(self.extra_bytes)
         # print(len(self.encrypted_pixels))
         return iv, self.encrypted_pixels

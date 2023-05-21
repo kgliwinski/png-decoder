@@ -19,16 +19,16 @@ cat = png.Png('pictures/cat.png')
 # cv.imshow('Encrypted', enc)
 # cv.imshow('Decrypted', dec)
 
-encrypted_ofb = png.EncryptedPng('pictures/dice.png')
-iv = encrypted_ofb.encrypt_decrypt_ofb('.tmp/encrypted_ofb.png')
+encrypted_cfb = png.EncryptedPng('pictures/dice.png')
+iv = encrypted_cfb.encrypt_decrypt_cfb('.tmp/encrypted_cfb.png')
 
-decrypted_ofb = png.EncryptedPng('.tmp/encrypted_ofb.png')
-decrypted_ofb.encrypt_decrypt_ofb('.tmp/decrypted_ofb.png', iv)
+decrypted_cfb = png.EncryptedPng('.tmp/encrypted_cfb.png')
+decrypted_cfb.encrypt_decrypt_cfb('.tmp/decrypted_cfb.png', iv)
 
-enc = cv.imread('.tmp/encrypted_ofb.png')
-dec = cv.imread('.tmp/decrypted_ofb.png')
-cv.imshow('Encrypted OFB', enc)
-cv.imshow('Decrypted OFB', dec)
+enc = cv.imread('.tmp/encrypted_cfb.png')
+dec = cv.imread('.tmp/decrypted_cfb.png')
+cv.imshow('Encrypted cfb', enc)
+cv.imshow('Decrypted cfb', dec)
 
 cv.waitKey(0)
 
