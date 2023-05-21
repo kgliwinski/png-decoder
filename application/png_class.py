@@ -432,28 +432,36 @@ class EncryptedPng(Png):
         super().__init__(file_png_name)
         idat_chunks = self.get_all_idat_chunks()
         self.rsa_2048 = rsa2048(idat_chunks, public_key=public_key, private_key=private_key)
-        # self.encrypt_rsa_2048()
+        # self.encrypt_ecb()
         # self.build_png_from_chunks(
         # ".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels())
 
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
 
-    def encrypt_rsa_2048(self):
+    def encrypt_ecb(self, png_path_str : str):
         data_to_encrypt = self.get_and_prepare_data_to_process()
         self.rsa_2048.encrypt_all_data_ECB(data_to_encrypt)
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
-        self.build_png_from_chunks(".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels(),
+        self.build_png_from_chunks(png_path_str, pixels=self.rsa_2048.get_encrypted_pixels(),
                                    after_iend_data=self.rsa_2048.get_extra_bytes())
         return self.rsa_2048.get_private_key()
 
-    def decrypt_rsa_2048(self):
+    def decrypt_ecb(self, png_path_str : str):
         extra_data = self.get_after_iend_data()
         data_to_decrypt = self.get_and_prepare_data_to_process()
         self.rsa_2048.decrypt_all_data_ECB(data_to_decrypt, extra_data)
         self.replace_idat_chunks(self.rsa_2048.get_decrypted_chunks())
         self.build_png_from_chunks(
-            ".tmp/decrypted.png", pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
+            png_path_str, pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
+        
+    def encrypt_decrypt_ofb(self, png_path_str : str, iv : bytes = None):
+        data_to_encrypt = self.get_and_prepare_data_to_process()
+        iv, _ = self.rsa_2048.encrypt_decrypt_all_data_OFB(data_to_encrypt, iv)
+        self.after_iend_data = self.rsa_2048.get_extra_bytes()
+        self.build_png_from_chunks(png_path_str, pixels=self.rsa_2048.get_encrypted_pixels(),
+                                   after_iend_data=self.rsa_2048.get_extra_bytes())
+        return iv
 
     def build_png_from_chunks(self, file_name: str, pixels, after_iend_data) -> bool:
         writer = self.get_png_writer()

@@ -3,6 +3,7 @@ import sympy
 import random
 import chunk_class as chunk
 import logging as log
+import os
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
@@ -44,6 +45,7 @@ class rsa2048:
 
         self.ENCRYPT_BLOCK_SIZE = self.key_size // 8
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT = self.ENCRYPT_BLOCK_SIZE - 1
+        self.ENCRYPT_BLOCK_SIZE_OFB = 16
 
         self.chunks_to_encrypt = chunks_to_encrypt
         self.encrypted_pixels = []
@@ -168,6 +170,55 @@ class rsa2048:
         self.decrypted_pixels = self.decrypt_ECB(data_to_decrypt_joined)
 
         return self.decrypted_pixels
+
+    def encrypt_block_OFB(self, data_to_encrypt_block, iv):
+        """
+        Output feedback encryption
+        """
+        encrypted_block = b''
+        for i in range(len(data_to_encrypt_block)):
+            encrypted_block += bytes([data_to_encrypt_block[i] ^ iv[i]])
+        return encrypted_block
+
+    def encrypt_decrypt_OFB(self, data_to_encrypt: bytes, iv: bytes = None):
+        """
+        Output feedback encryption
+        """
+        # divide data into blocks
+        data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_OFB]
+                                    for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_OFB)]
+        
+        # generate random IV
+        if iv is None:
+            iv = os.urandom(self.ENCRYPT_BLOCK_SIZE_OFB)
+
+        original_iv = iv
+        
+        # self.encrypted_pixels += iv
+
+        # encrypt blocks
+        for data_to_encrypt_block in data_to_encrypt_blocks:
+            encrypted_block = self.encrypt_block_OFB(data_to_encrypt_block, iv)
+            self.encrypted_pixels += encrypted_block
+            iv = encrypted_block
+        
+        return original_iv, self.encrypted_pixels
+    
+    def encrypt_decrypt_all_data_OFB(self, data_to_encrypt: bytes, iv: bytes = None):
+        """ 
+        # Encrypt all chunks
+        ## Returns:
+            - list: list of encrypted chunks
+        """
+        self.encrypted_chunks = []
+        self.extra_bytes = b''
+        self.encrypted_pixels = []
+
+        iv, self.encrypted_pixels = self.encrypt_decrypt_OFB(data_to_encrypt, iv)
+        # print(self.extra_bytes)
+        # print(len(self.encrypted_pixels))
+        return iv, self.encrypted_pixels
+
 
     def get_encrypted_chunks(self) -> list:
         """ 
