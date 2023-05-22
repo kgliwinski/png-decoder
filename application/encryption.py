@@ -4,6 +4,12 @@ import random
 import chunk_class as chunk
 import logging as log
 import os
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import unpad
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
@@ -30,9 +36,9 @@ class rsa2048:
                 q = sympy.randprime(2**(prime_size - 1), 2**prime_size-1)
             n = p * q
             phi = (p - 1) * (q - 1)
-            e = sympy.randprime(2**(self.key_size - 1), 2**self.key_size)
+            e = sympy.randprime(2**(prime_size- 1), 2**prime_size)
             while sympy.gcd(e, phi) != 1 and e >= phi:
-                e = sympy.randprime(2**(self.key_size - 1), 2**self.key_size)
+                e = sympy.randprime(2**(prime_size - 1), 2**prime_size)
             self.public_key = (n, e)
         else:
             self.public_key = public_key
@@ -46,6 +52,9 @@ class rsa2048:
         self.ENCRYPT_BLOCK_SIZE = self.key_size // 8
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT = self.ENCRYPT_BLOCK_SIZE - 1
         self.ENCRYPT_BLOCK_SIZE_CFB = 16
+
+        self.ENCRYPT_BLOCK_SIZE_2 = key_size // 16
+        self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2 = self.ENCRYPT_BLOCK_SIZE_2 - 1
 
         self.chunks_to_encrypt = chunks_to_encrypt
         self.encrypted_pixels = []
@@ -249,6 +258,35 @@ class rsa2048:
             iv = encrypted_block  # Use the encrypted block as IV for the next iteration
 
         return decrypted_data
+
+
+    def encrypt_all_data_AES_ECB(self, data_to_encrypt: bytes, public_key: tuple):
+        """ 
+        # Encrypt all chunks
+        ## Returns:
+            - list: list of encrypted chunks
+        """
+
+        self.encrypted_chunks = []
+        # self.extra_bytes = b''
+        self.encrypted_pixels = []
+        extra_data = b''
+        key = RSA.construct((public_key[0],public_key[1]))
+        cipher = PKCS1_OAEP.new(key)
+        
+        data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2]
+                                    for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2)]
+        for data_to_encrypt_block in data_to_encrypt_blocks:
+            encrypted_block = cipher.encrypt(data_to_encrypt_block)
+            if len(data_to_encrypt_block) < self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2:
+                self.encrypted_pixels += encrypted_block[0:len(
+                    data_to_encrypt_block)]
+                # self.extra_bytes += encrypted_block[len(data_to_encrypt_block):]
+            else:
+                self.encrypted_pixels += encrypted_block[0:
+                                                         self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2]
+                extra_data += encrypted_block[self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2:]
+        return extra_data, self.encrypted_pixels
 
 
     def get_encrypted_chunks(self) -> list:

@@ -35,15 +35,15 @@ class Png:
         self.process_idat()
         self.process_palette()
         self.process_ending()
-        if self.assert_chunks() is False:
-            log.error("Chunk assertion failed!")
-            # raise Exception("Chunk assertion failed!")
         self.process_gama()
         self.process_chrm()
         self.process_bkgd()
         self.process_srgb()
         self.process_hist()
         self.process_exif()
+        # if self.assert_chunks() is False:
+        # log.error("Chunk assertion failed!")
+        # raise Exception("Chunk assertion failed!")
         log.info("Ancilliary dictionary: %s", self.ancilliary_dict)
 
     def __del__(self):
@@ -90,7 +90,7 @@ class Png:
 
     def get_after_iend_data(self) -> bytes:
         return self.after_iend_data
-    
+
     def check_if_plte_exists(self) -> bool:
         return 'PLTE' in self.get_chunk_types()
 
@@ -99,6 +99,7 @@ class Png:
         Checks if all chunks are valid
         """
         for chunk in self.chunks:
+            print("Asserting chunk: ", chunk.get_chunk_type())
             if chunk.assert_chunk() is False:
                 log.error("Chunk %s is invalid!", chunk.get_chunk_type())
                 return False
@@ -304,6 +305,15 @@ class Png:
             return None
         return self.chunks[index]
 
+    def get_exif(self) -> chunk.Chunk:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index("eXIf")
+        except:
+            log.info("No eXIf section in this image!")
+            return None
+        return self.chunks[index]
+
     def get_fourier_transform(self, tmp_name: str = ".tmp/temp", save: bool = False):
         """ Print FFT of an image (shows magnitude and phase)
             Compare original image and inverted fft of original image (checks transformation)
@@ -444,12 +454,13 @@ class AnomizedPng(Png):
 
 
 class EncryptedPng(Png):
-    def __init__(self, file_png_name: str, public_key = None, private_key = None):
+    def __init__(self, file_png_name: str, public_key=None, private_key=None):
         super().__init__(file_png_name)
         if self.assert_file() == False:
             exit(1)
         idat_chunks = self.get_all_idat_chunks()
-        self.rsa_2048 = rsa2048(idat_chunks, public_key=public_key, private_key=private_key)
+        self.rsa_2048 = rsa2048(
+            idat_chunks, public_key=public_key, private_key=private_key)
         # self.encrypt_ecb()
         # self.build_png_from_chunks(
         # ".tmp/encrypted.png", pixels=self.rsa_2048.get_encrypted_pixels())
@@ -463,7 +474,7 @@ class EncryptedPng(Png):
             return False
         return True
 
-    def encrypt_ecb(self, png_path_str : str):
+    def encrypt_ecb(self, png_path_str: str):
         data_to_encrypt = self.get_and_prepare_data_to_process()
         self.rsa_2048.encrypt_all_data_ECB(data_to_encrypt)
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
@@ -471,29 +482,37 @@ class EncryptedPng(Png):
                                    after_iend_data=self.rsa_2048.get_extra_bytes())
         return self.rsa_2048.get_private_key()
 
-    def decrypt_ecb(self, png_path_str : str):
+    def decrypt_ecb(self, png_path_str: str):
         extra_data = self.get_after_iend_data()
         data_to_decrypt = self.get_and_prepare_data_to_process()
         self.rsa_2048.decrypt_all_data_ECB(data_to_decrypt, extra_data)
         self.replace_idat_chunks(self.rsa_2048.get_decrypted_chunks())
         self.build_png_from_chunks(
             png_path_str, pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
-        
-    def encrypt_cfb(self, png_path_str : str, iv : bytes = None):
+
+    def encrypt_cfb(self, png_path_str: str, iv: bytes = None):
         data_to_encrypt = self.get_and_prepare_data_to_process()
         iv, _ = self.rsa_2048.encrypt_all_data_CFB(data_to_encrypt, iv)
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
         self.build_png_from_chunks(png_path_str, pixels=self.rsa_2048.get_encrypted_pixels(),
                                    after_iend_data=self.rsa_2048.get_extra_bytes())
         return iv
-    
-    def decrypt_cfb(self, png_path_str : str, iv : bytes):
+
+    def decrypt_cfb(self, png_path_str: str, iv: bytes):
         extra_data = self.get_after_iend_data()
         data_to_decrypt = self.get_and_prepare_data_to_process()
-        decrypted_pixels = self.rsa_2048.decrypt_all_data_CFB(data_to_decrypt, iv)
+        decrypted_pixels = self.rsa_2048.decrypt_all_data_CFB(
+            data_to_decrypt, iv)
         # self.replace_idat_chunks(self.rsa_2048.get_decrypted_chunks())
         self.build_png_from_chunks(
             png_path_str, pixels=decrypted_pixels, after_iend_data=b'')
+
+    def encrypt_aes_ecb(self, png_path_str, public_key):
+        data_to_encrypt = self.get_and_prepare_data_to_process()
+        extra, data = self.rsa_2048.encrypt_all_data_AES_ECB(
+            data_to_encrypt, public_key=public_key)
+        self.build_png_from_chunks(png_path_str, pixels=data,
+                                   after_iend_data=extra)
 
     def build_png_from_chunks(self, file_name: str, pixels, after_iend_data) -> bool:
         writer = self.get_png_writer()
@@ -626,3 +645,6 @@ class EncryptedPng(Png):
                 reconstructed_idat_data += bytes([recon_x & 0xFF])
                 # print(i)
         return reconstructed_idat_data
+    
+    def return_keys(self):
+        return self.rsa_2048.get_public_key(), self.rsa_2048.get_private_key()

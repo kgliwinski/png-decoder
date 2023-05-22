@@ -9,6 +9,7 @@ import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import PIL.Image
 # from os import listdir
 
 
@@ -30,14 +31,12 @@ class MainWindow(QMainWindow):
         self.tab3 = QWidget()
         self.tab4 = QWidget()
         self.tab5 = QWidget()
-        # self.tab6 = QWidget()
 
         self.tab_widget.addTab(self.tab1, "IHDR and image")
         self.tab_widget.addTab(self.tab2, "PLTE")
         self.tab_widget.addTab(self.tab3, "FFT")
         self.tab_widget.addTab(self.tab4, "Ancilliary chunks")
         self.tab_widget.addTab(self.tab5, "Anomized image")
-        # self.tab_widget.addTab(self.tab6, "Encrypted image")
 
         self.tab_widget.setTabBarAutoHide(True)
 
@@ -46,9 +45,8 @@ class MainWindow(QMainWindow):
         self.create_fft_tab()
         self.create_ancilliary_chunks_tab()
         self.create_anomized_image_tab()
-        # self.create_encrypted_image_tab()
 
-        self.showMaximized()
+        self.showNormal()
 
     def create_ihdr_tab(self):
         # Create widgets
@@ -387,90 +385,9 @@ class MainWindow(QMainWindow):
 
         self.tab5.setLayout(tab5_layout)
 
-    def create_encrypted_image_tab(self):
-        self.encrypted_image_label = QLabel("Encrypted image:")
-        self.encrypted_image_label.setFixedSize(
-            self.IMG_WIDTH, self.IMG_HEIGHT)
-        self.encrypted_image_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
-
-        self.encrypted_image_field = QLabel()
-        self.encrypted_image_field.setFixedSize(
-            self.IMG_WIDTH, self.IMG_HEIGHT)
-        self.encrypted_image_field.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop | QtCore.Qt.AlignmentFlag.AlignHCenter)
-
-        self.encrypted_image_data_size_label = QLabel(
-            "Encrypted vs. original image data size, difference in size:")
-        self.encrypted_image_data_size_field = QLineEdit(self.tab6)
-        self.encrypted_image_data_size_field.setReadOnly(True)
-
-        self.encrypted_image_data_size_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop)
-
-        self.encrypted_data_deleted_chunks_number_label = QLabel(
-            "Encrypted data deleted chunks number:")
-        self.encrypted_data_deleted_chunks_number_field = QLineEdit(
-            self.tab6)
-        self.encrypted_data_deleted_chunks_number_field.setReadOnly(True)
-
-        self.encrypted_data_deleted_chunks_list_label = QLabel(
-            "Encrypted data deleted chunks list:")
-        self.encrypted_data_deleted_chunks_list_field = QLineEdit(
-            self.tab6)
-        self.encrypted_data_deleted_chunks_list_field.setReadOnly(True)
-
-        self.encrypted_data_updated_crc_number_label = QLabel(
-            "Encrypted data updated CRC chunks number:")
-        self.encrypted_data_updated_crc_number_field = QLineEdit(
-            self.tab6)
-        self.encrypted_data_updated_crc_number_field.setReadOnly(True)
-
-        # create two columns
-        self.encrypted_image_column_one = QVBoxLayout()
-        self.encrypted_image_column_one.addWidget(self.encrypted_image_label)
-        self.encrypted_image_column_one.addWidget(self.encrypted_image_field)
-
-        self.encrypted_image_column_one.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop)
-
-        self.encrypted_image_column_two = QVBoxLayout()
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_image_data_size_label)
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_image_data_size_field)
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_data_deleted_chunks_number_label)
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_data_deleted_chunks_number_field)
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_data_deleted_chunks_list_label)
-        
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_data_deleted_chunks_list_field)
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_data_updated_crc_number_label)
-        self.encrypted_image_column_two.addWidget(
-            self.encrypted_data_updated_crc_number_field)
-        
-        self.encrypted_image_column_two.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop)
-        
-        # create one line
-        self.encrypted_image_line = QHBoxLayout()
-        self.encrypted_image_line.addLayout(self.encrypted_image_column_one)
-        self.encrypted_image_line.addLayout(self.encrypted_image_column_two)
-
-        tab6_layout = QVBoxLayout()
-        tab6_layout.addLayout(self.encrypted_image_line)
-
-        tab6_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
-
-        self.tab6.setLayout(tab6_layout)
-
     def display_image_and_hdr_data(self):
         self.png_path = self.png_input_field.currentText()
-        # print(self.png_path)
+        print(self.png_path)
         # Load image with OpenCV
         image = cv.imread(self.png_path)
 
@@ -496,7 +413,7 @@ class MainWindow(QMainWindow):
     def load_image_values(self):
         try:
             self.png_type = png.Png(self.png_path)
-            # print(self.png_type)
+            print(self.png_type)
             self.png_input_label.setText("PNG path:")
             hdr = self.png_type.get_header()
             self.update_fields_from_header(hdr)
@@ -509,7 +426,6 @@ class MainWindow(QMainWindow):
             self.update_fourier_transform()
             self.update_ancilliary_chunks()
             self.update_anomized_image()
-            # self.update_encrypted_image()
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
             pass
@@ -643,7 +559,8 @@ class MainWindow(QMainWindow):
 
     def update_ancilliary_chunks(self):
         ancilliary = self.png_type.get_ancilliary_dict()
-
+        pil_img = PIL.Image.open(self.png_path)
+        exif = self.png_type.get_exif()
         if 'gAMA' not in ancilliary.keys():
             self.gama_field.setText('No gAMA chunk found')
         else:
@@ -667,7 +584,7 @@ class MainWindow(QMainWindow):
         if 'eXIf' not in ancilliary.keys():
             self.exif_field.setText('No eXIf chunk found')
         else:
-            self.exif_field.setText(str(ancilliary['eXIf']))
+            self.exif_field.setText(str(ancilliary['eXIf']) + str(pil_img._getexif()))
         if 'hIST' not in ancilliary.keys():
             self.hist_field.setText('No hIST chunk found')
 
@@ -694,21 +611,3 @@ class MainWindow(QMainWindow):
             str(self.anomized.get_deleted_chunks_list()))
         self.anomized_data_updated_crc_number_field.setText(
             str(self.anomized.get_crc_saved_bytes()))
-        
-    # def update_encrypted_image(self):
-    #     self.encrypted = png.EncryptedPng(self.png_path)
-    #     self.encrypted.build_png_from_chunks('.tmp/encrypted.png')
-    #     img = cv.imread('.tmp/encrypted.png')
-    #     pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
-    #                                       QImage.Format.Format_BGR888))
-    #     pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
-    #                            aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-    #     self.encrypted_image_label.setPixmap(pixmap)
-
-    #     self.encrypted_image_data_size_field.setText(
-    #         str(self.encrypted.get_png_data_size()) + " vs. " +
-    #         str(self.png_type.get_png_data_size()) +
-    #         ". Difference of: " +
-    #         str(self.png_type.get_png_data_size() -
-    #             self.encrypted.get_png_data_size())
-    #         + " bytes")

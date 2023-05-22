@@ -364,6 +364,7 @@ class gAMA(Chunk):
         if self.chunk_length != 4:
             log.error("ERROR: gAMA chunk length is not 4")
             return False
+        return True
 
 
 class cHRM(Chunk):
@@ -454,6 +455,12 @@ class sRGB(Chunk):
 
     def get_srgb_data(self) -> int:
         return self.rendering_intent
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 1:
+            log.error("ERROR: sRGB chunk length is not 1")
+            return False
+        return True
 
 
 class hIST(Chunk):
