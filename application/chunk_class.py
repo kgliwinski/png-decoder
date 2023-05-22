@@ -150,6 +150,13 @@ class Chunk:
         self.raw_length = self.chunk_length.to_bytes(
             self.LENGTH_FIELD_LEN, 'big')
         return True
+    
+    def assert_chunk(self) -> bool:
+        """
+        Asserts that the chunk is valid
+        """
+        # Placeholder for methods in inherited classes
+        return True
 
 # 0000001C  // byte length of IDAT chunk contents, 4 bytes, value 28
 # 49444154  // IDAT start - 4 bytes
@@ -201,6 +208,12 @@ class IDAT(Chunk):
             2, 'big') + negated.to_bytes(2, 'big')
         self.chunk_data = self.zlib_header + self.bfinal_btype + \
             self.len_nlen + self.filter + self.idat_data + self.adler32
+        
+    def assert_chunk(self) -> bool:
+        """
+        Asserts that the chunk is valid
+        """
+        return True
 
 
 class IHDR(Chunk):
@@ -276,6 +289,15 @@ class IHDR(Chunk):
             log.error(
                 "ERROR: Given bit depth (%d) is not allowed when color_type is %s (%d)", self.hdr_data["bit_depth"], self.hdr_data["color_type_str"], self.hdr_data["color_type"])
             return False
+    
+    def assert_chunk(self) -> bool:
+        if self.hdr_data["color_type"] not in [0, 2, 3, 4, 6]:
+            log.error("ERROR: Color type is not valid")
+            return False
+        if self.hdr_data["bit_depth"] not in [1, 2, 4, 8, 16]:
+            log.error("ERROR: Bit depth is not valid")
+            return False
+        return True
 
 
 class PLTE(Chunk):
@@ -295,6 +317,12 @@ class PLTE(Chunk):
 
     def get_plte_data(self) -> list:
         return self.plte_data
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length % 3 != 0:
+            log.error("ERROR: PLTE chunk length is not divisible by 3")
+            return False
+        return True
 
 
 class IEND(Chunk):
@@ -306,6 +334,12 @@ class IEND(Chunk):
         if self.chunk_length != 0:
             log.error(
                 "ERROR: IEND should be of length 0, but its length is %d", self.chunk_length)
+            return False
+        return True
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 0:
+            log.error("ERROR: IEND chunk length is not 0")
             return False
         return True
 
@@ -325,6 +359,11 @@ class gAMA(Chunk):
 
     def get_gama_data(self) -> float:
         return self.gamma
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 4:
+            log.error("ERROR: gAMA chunk length is not 4")
+            return False
 
 
 class cHRM(Chunk):
@@ -362,6 +401,11 @@ class cHRM(Chunk):
     def get_chrm_data(self) -> dict:
         return {"white_point_x": self.white_point_x, "white_point_y": self.white_point_y, "red_x": self.red_x, "red_y": self.red_y, "green_x": self.green_x, "green_y": self.green_y, "blue_x": self.blue_x, "blue_y": self.blue_y}
 
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 32:
+            log.error("ERROR: cHRM chunk length is not 32")
+            return False
+        return True
 
 class bKGD(Chunk):
     def __init__(self) -> None:
@@ -387,6 +431,12 @@ class bKGD(Chunk):
 
     def get_bkgd_data(self) -> Union[int, tuple]:
         return self.background
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length not in (1, 2, 6):
+            log.error("ERROR: bKGD chunk length is not 1, 2 or 6")
+            return False
+        return True
 
 
 class sRGB(Chunk):
@@ -424,6 +474,12 @@ class hIST(Chunk):
 
     def get_hist_data(self) -> list:
         return self.histogram
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length % 2 != 0:
+            log.error("ERROR: hIST chunk length is not even")
+            return False
+        return True
 
 
 class eXIf(Chunk):
@@ -456,3 +512,15 @@ class eXIf(Chunk):
 
     def get_exif_data(self) -> dict:
         return {"exif_endian": self.exif_endian_str, "exif_fourty_two": self.exif_fourty_two}
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length <= 0:
+            log.error("ERROR: eXIF chunk length is not at least 6")
+            return False
+        if self.exif_endian != b'II' and self.exif_endian != b'MM':
+            log.error("ERROR: eXIF should start with II or MM")
+            return False
+        if self.exif_fourty_two != 42:
+            log.error("ERROR: eXIF should have 42 as the next two bytes")
+            return False
+        return True

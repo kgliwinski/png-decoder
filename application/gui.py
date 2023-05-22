@@ -30,14 +30,14 @@ class MainWindow(QMainWindow):
         self.tab3 = QWidget()
         self.tab4 = QWidget()
         self.tab5 = QWidget()
-        self.tab6 = QWidget()
+        # self.tab6 = QWidget()
 
         self.tab_widget.addTab(self.tab1, "IHDR and image")
         self.tab_widget.addTab(self.tab2, "PLTE")
         self.tab_widget.addTab(self.tab3, "FFT")
         self.tab_widget.addTab(self.tab4, "Ancilliary chunks")
         self.tab_widget.addTab(self.tab5, "Anomized image")
-        self.tab_widget.addTab(self.tab6, "Encrypted image")
+        # self.tab_widget.addTab(self.tab6, "Encrypted image")
 
         self.tab_widget.setTabBarAutoHide(True)
 
@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         self.create_fft_tab()
         self.create_ancilliary_chunks_tab()
         self.create_anomized_image_tab()
-        self.create_encrypted_image_tab()
+        # self.create_encrypted_image_tab()
 
         self.showMaximized()
 
@@ -509,7 +509,7 @@ class MainWindow(QMainWindow):
             self.update_fourier_transform()
             self.update_ancilliary_chunks()
             self.update_anomized_image()
-            self.update_encrypted_image()
+            # self.update_encrypted_image()
         except:
             self.png_input_label.setText("PNG Path: Invalid file name!")
             pass
@@ -695,20 +695,20 @@ class MainWindow(QMainWindow):
         self.anomized_data_updated_crc_number_field.setText(
             str(self.anomized.get_crc_saved_bytes()))
         
-    def update_encrypted_image(self):
-        self.encrypted = png.EncryptedPng(self.png_path)
-        self.encrypted.build_png_from_chunks('.tmp/encrypted.png')
-        img = cv.imread('.tmp/encrypted.png')
-        pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
-                                          QImage.Format.Format_BGR888))
-        pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
-                               aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-        self.encrypted_image_label.setPixmap(pixmap)
+    # def update_encrypted_image(self):
+    #     self.encrypted = png.EncryptedPng(self.png_path)
+    #     self.encrypted.build_png_from_chunks('.tmp/encrypted.png')
+    #     img = cv.imread('.tmp/encrypted.png')
+    #     pixmap = QPixmap.fromImage(QImage(img, img.shape[1], img.shape[0], img.strides[0],
+    #                                       QImage.Format.Format_BGR888))
+    #     pixmap = pixmap.scaled(self.GRAPH_WIDTH_AND_HEIGHT, self.GRAPH_WIDTH_AND_HEIGHT,
+    #                            aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+    #     self.encrypted_image_label.setPixmap(pixmap)
 
-        self.encrypted_image_data_size_field.setText(
-            str(self.encrypted.get_png_data_size()) + " vs. " +
-            str(self.png_type.get_png_data_size()) +
-            ". Difference of: " +
-            str(self.png_type.get_png_data_size() -
-                self.encrypted.get_png_data_size())
-            + " bytes")
+    #     self.encrypted_image_data_size_field.setText(
+    #         str(self.encrypted.get_png_data_size()) + " vs. " +
+    #         str(self.png_type.get_png_data_size()) +
+    #         ". Difference of: " +
+    #         str(self.png_type.get_png_data_size() -
+    #             self.encrypted.get_png_data_size())
+    #         + " bytes")

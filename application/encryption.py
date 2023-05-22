@@ -7,7 +7,7 @@ import os
 # https://github.com/Vipul97/des
 # https://www.techtarget.com/searchsecurity/definition/Electronic-Code-Book
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
-
+# https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation
 
 class rsa2048:
 

@@ -35,6 +35,9 @@ class Png:
         self.process_idat()
         self.process_palette()
         self.process_ending()
+        if self.assert_chunks() is False:
+            log.error("Chunk assertion failed!")
+            # raise Exception("Chunk assertion failed!")
         self.process_gama()
         self.process_chrm()
         self.process_bkgd()
@@ -87,6 +90,19 @@ class Png:
 
     def get_after_iend_data(self) -> bytes:
         return self.after_iend_data
+    
+    def check_if_plte_exists(self) -> bool:
+        return 'PLTE' in self.get_chunk_types()
+
+    def assert_chunks(self) -> bool:
+        """
+        Checks if all chunks are valid
+        """
+        for chunk in self.chunks:
+            if chunk.assert_chunk() is False:
+                log.error("Chunk %s is invalid!", chunk.get_chunk_type())
+                return False
+        return True
 
     def process_header(self) -> bool:
         chunk_types = self.get_chunk_types()
@@ -430,6 +446,8 @@ class AnomizedPng(Png):
 class EncryptedPng(Png):
     def __init__(self, file_png_name: str, public_key = None, private_key = None):
         super().__init__(file_png_name)
+        if self.assert_file() == False:
+            exit(1)
         idat_chunks = self.get_all_idat_chunks()
         self.rsa_2048 = rsa2048(idat_chunks, public_key=public_key, private_key=private_key)
         # self.encrypt_ecb()
@@ -438,6 +456,12 @@ class EncryptedPng(Png):
 
     def __str__(self) -> str:
         return super().__str__() + "Encrypted PNG created"
+
+    def assert_file(self) -> bool:
+        if self.check_if_plte_exists() == True:
+            log.error("Encryption does not support PLTE!")
+            return False
+        return True
 
     def encrypt_ecb(self, png_path_str : str):
         data_to_encrypt = self.get_and_prepare_data_to_process()

@@ -8,7 +8,7 @@ import sys
 
 if __name__ == '__main__':
     log.basicConfig(
-        format='%(levelname)s {%(pathname)s:%(lineno)d} %(asctime)s %(message)s', level=log.INFO)
+        format='%(levelname)s {%(pathname)s:%(lineno)d} %(asctime)s %(message)s', level=log.ERROR)
     # ex_png : png.Png = png.Png('cat.png')
 
     # print(ex_png.read_signature())

@@ -7,19 +7,20 @@ log.basicConfig(
 cat = png.Png('pictures/cat.png')
 # print(cat.get_chunk_types())
 
+original_png_path = input('Enter path to png file: ')
 
-# encrypted = png.EncryptedPng('pictures/dice.png')
-# private_key = encrypted.encrypt_ecb('.tmp/encrypted_ecb.png')
+encrypted = png.EncryptedPng(original_png_path)
+private_key = encrypted.encrypt_ecb('.tmp/encrypted_ecb.png')
 
-# decrypted = png.EncryptedPng('.tmp/encrypted_ecb.png', private_key = private_key)
-# decrypted.decrypt_ecb('.tmp/decrypted_ecb.png')
+decrypted = png.EncryptedPng('.tmp/encrypted_ecb.png', private_key = private_key)
+decrypted.decrypt_ecb('.tmp/decrypted_ecb.png')
 
-# enc = cv.imread('.tmp/encrypted_ecb.png')
-# dec = cv.imread('.tmp/decrypted_ecb.png')
-# cv.imshow('Encrypted', enc)
-# cv.imshow('Decrypted', dec)
+enc = cv.imread('.tmp/encrypted_ecb.png')
+dec = cv.imread('.tmp/decrypted_ecb.png')
+cv.imshow('Encrypted', enc)
+cv.imshow('Decrypted', dec)
 
-encrypted_cfb = png.EncryptedPng('pictures/dice.png')
+encrypted_cfb = png.EncryptedPng(original_png_path)
 iv = encrypted_cfb.encrypt_cfb('.tmp/encrypted_cfb.png')
 
 decrypted_cfb = png.EncryptedPng('.tmp/encrypted_cfb.png')
