@@ -490,13 +490,15 @@ class EncryptedPng(Png):
         self.build_png_from_chunks(
             png_path_str, pixels=self.rsa_2048.get_decrypted_pixels(), after_iend_data=b'')
 
-    def encrypt_cfb(self, png_path_str: str, iv: bytes = None):
+    def encrypt_cfb(self, png_path_str: str):
         data_to_encrypt = self.get_and_prepare_data_to_process()
-        iv, _ = self.rsa_2048.encrypt_all_data_CFB(data_to_encrypt, iv)
+        iv, _ = self.rsa_2048.encrypt_all_data_CFB(data_to_encrypt)
         self.after_iend_data = self.rsa_2048.get_extra_bytes()
         self.build_png_from_chunks(png_path_str, pixels=self.rsa_2048.get_encrypted_pixels(),
                                    after_iend_data=self.rsa_2048.get_extra_bytes())
-        return iv
+        public_key = self.rsa_2048.get_public_key()
+        private_key = self.rsa_2048.get_private_key()
+        return iv, public_key, private_key
 
     def decrypt_cfb(self, png_path_str: str, iv: bytes):
         extra_data = self.get_after_iend_data()

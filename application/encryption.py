@@ -15,9 +15,10 @@ from Crypto.Cipher import PKCS1_OAEP
 # https://en.wikipedia.org/wiki/RSA_(cryptosystem)
 # https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation
 
+
 class rsa2048:
 
-    def __init__(self, chunks_to_encrypt: list, key_size: int = 1024, public_key: tuple = None, private_key: tuple = None):
+    def __init__(self, chunks_to_encrypt: list, key_size: int = 2048, public_key: tuple = None, private_key: tuple = None):
         """ 
         # Chunk RSA2048 encryption
         User can provide public_key and private_key or generate new ones.
@@ -36,12 +37,14 @@ class rsa2048:
                 q = sympy.randprime(2**(prime_size - 1), 2**prime_size-1)
             n = p * q
             phi = (p - 1) * (q - 1)
-            e = sympy.randprime(2**(prime_size- 1), 2**prime_size)
+            e = sympy.randprime(2**(prime_size - 1), 2**prime_size)
             while sympy.gcd(e, phi) != 1 and e >= phi:
                 e = sympy.randprime(2**(prime_size - 1), 2**prime_size)
             self.public_key = (n, e)
         else:
             self.public_key = public_key
+            n, e = public_key
+            
 
         if private_key is None:
             d = sympy.mod_inverse(e, phi)
@@ -51,7 +54,9 @@ class rsa2048:
 
         self.ENCRYPT_BLOCK_SIZE = self.key_size // 8
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT = self.ENCRYPT_BLOCK_SIZE - 1
-        self.ENCRYPT_BLOCK_SIZE_CFB = 16
+        
+        self.ENCRYPT_BLOCK_SIZE_CFB = self.key_size // 8
+        self.ENCRYPT_BLOCK_SIZE_SUBTRACT_CFB = self.ENCRYPT_BLOCK_SIZE_CFB - 1
 
         self.ENCRYPT_BLOCK_SIZE_2 = key_size // 16
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2 = self.ENCRYPT_BLOCK_SIZE_2 - 1
@@ -76,6 +81,21 @@ class rsa2048:
         """ Returns decrypted pixels"""
         return self.decrypted_pixels
 
+    def encrypt_block_ecb(self, block: bytes) -> bytes:
+        """ 
+        # Encrypt block
+        ## Args:
+            - block (bytes): block to encrypt
+        ## Returns:
+            - bytes: encrypted block
+        """
+        encrypted_int: int = pow(int.from_bytes(block, byteorder='big'),
+                                 self.public_key[1], self.public_key[0])
+        encrypted_block = encrypted_int.to_bytes(
+            self.ENCRYPT_BLOCK_SIZE, byteorder='big')
+
+        return encrypted_block
+
     # encrypt chunk using the Electronic codebook (ECB) mode
     def encrypt_ECB(self, data_to_encrypt: bytes):
         """ 
@@ -93,10 +113,8 @@ class rsa2048:
                                   for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT)]
 
         for data_to_encrypt_block in data_to_encrypt_blocks:
-            encrypted_int: int = pow(int.from_bytes(data_to_encrypt_block, byteorder='big'),
-                                     self.public_key[1], self.public_key[0])
-            encrypted_block = encrypted_int.to_bytes(
-                self.ENCRYPT_BLOCK_SIZE, byteorder='big')
+
+            encrypted_block = self.encrypt_block_ecb(data_to_encrypt_block)
 
             if len(data_to_encrypt_block) < self.ENCRYPT_BLOCK_SIZE_SUBTRACT:
                 self.encrypted_pixels += encrypted_block[0:len(
@@ -124,6 +142,21 @@ class rsa2048:
         # print(len(self.encrypted_pixels))
         return self.encrypted_chunks, self.extra_bytes
 
+    def decrypt_block_ecb(self, block: bytes) -> bytes:
+        """ 
+        # Decrypt block
+        ## Args:
+            - block (bytes): block to decrypt
+        ## Returns:
+            - bytes: decrypted block
+        """
+        decrypted_int: int = pow(int.from_bytes(block, byteorder='big'),
+                                 self.private_key[1], self.private_key[0])
+        decrypted_block = decrypted_int.to_bytes(
+            self.ENCRYPT_BLOCK_SIZE_SUBTRACT, byteorder='big')
+
+        return decrypted_block
+
     def decrypt_ECB(self, data_to_decrypt: bytes):
         """ 
         # Decrypt chunk
@@ -139,16 +172,15 @@ class rsa2048:
 
         print(len(data_to_decrypt_blocks))
         for data_to_decrypt_block in data_to_decrypt_blocks:
-            decrypted_int: int = pow(int.from_bytes(data_to_decrypt_block, byteorder='big'),
-                                     self.private_key[1], self.private_key[0])
+            decrypted_block = self.decrypt_block_ecb(data_to_decrypt_block)
 
             if (len(data_to_decrypt_block) < self.ENCRYPT_BLOCK_SIZE):
-                decrypted_data += decrypted_int.to_bytes(
-                    len(data_to_decrypt_block), byteorder='big')
+                decrypted_data += decrypted_block[0:len(
+                    data_to_decrypt_block)]
+
             else:
-                decrypted_block = decrypted_int.to_bytes(
-                    self.ENCRYPT_BLOCK_SIZE_SUBTRACT, byteorder='big')
-                decrypted_data += decrypted_block
+                decrypted_data += decrypted_block[0:
+                                                  self.ENCRYPT_BLOCK_SIZE_SUBTRACT]
 
         return decrypted_data
 
@@ -185,35 +217,34 @@ class rsa2048:
         Output feedback encryption
         """
         encrypted_block = b''
+        iv = self.encrypt_block_ecb(iv)
         for i in range(len(data_to_encrypt_block)):
             encrypted_block += bytes([data_to_encrypt_block[i] ^ iv[i]])
+
         return encrypted_block
 
-    def encrypt_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
+    def encrypt_CFB(self, data_to_encrypt: bytes, iv: bytes):
         """
         Output feedback encryption
         """
         # divide data into blocks
         data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_CFB]
-                                    for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_CFB)]
-        
-        # generate random IV
-        if iv is None:
-            iv = os.urandom(self.ENCRYPT_BLOCK_SIZE_CFB)
+                                  for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_CFB)]
 
         original_iv = iv
-        
+
         # self.encrypted_pixels += iv
 
         # encrypt blocks
-        for data_to_encrypt_block in data_to_encrypt_blocks:
+        for i, data_to_encrypt_block in enumerate(data_to_encrypt_blocks):
             encrypted_block = self.encrypt_block_CFB(data_to_encrypt_block, iv)
             self.encrypted_pixels += encrypted_block
             iv = encrypted_block
-        
+            print(i, len(data_to_encrypt_blocks))
+
         return original_iv, self.encrypted_pixels
-    
-    def encrypt_all_data_CFB(self, data_to_encrypt: bytes, iv: bytes = None):
+
+    def encrypt_all_data_CFB(self, data_to_encrypt: bytes):
         """ 
         # Encrypt all chunks
         ## Returns:
@@ -223,23 +254,25 @@ class rsa2048:
         self.extra_bytes = b''
         self.encrypted_pixels = []
 
+        iv = os.urandom(self.ENCRYPT_BLOCK_SIZE_CFB)
+
         iv, self.encrypted_pixels = self.encrypt_CFB(data_to_encrypt, iv)
         # print(self.extra_bytes)
         # print(len(self.encrypted_pixels))
         return iv, self.encrypted_pixels
-    
+
     def decrypt_block_CFB(self, encrypted_block, iv):
         """
         Decrypt a single block using CFB mode
         """
         decrypted_block = b''
+        iv = self.encrypt_block_ecb(iv)
+
         for i in range(len(encrypted_block)):
             decrypted_byte = encrypted_block[i] ^ iv[i]
             decrypted_block += bytes([decrypted_byte])
-            
-        iv = decrypted_block  # Update IV for next iteration
-        return decrypted_block
 
+        return decrypted_block
 
     def decrypt_all_data_CFB(self, encrypted_data, iv):
         """
@@ -252,13 +285,13 @@ class rsa2048:
                             for i in range(0, len(encrypted_data), self.ENCRYPT_BLOCK_SIZE_CFB)]
 
         # Decrypt blocks
-        for encrypted_block in encrypted_blocks:
+        for i, encrypted_block in enumerate(encrypted_blocks):
             decrypted_block = self.decrypt_block_CFB(encrypted_block, iv)
             decrypted_data += decrypted_block
             iv = encrypted_block  # Use the encrypted block as IV for the next iteration
+            print(i, len(encrypted_blocks))
 
         return decrypted_data
-
 
     def encrypt_all_data_AES_ECB(self, data_to_encrypt: bytes, public_key: tuple):
         """ 
@@ -271,11 +304,11 @@ class rsa2048:
         # self.extra_bytes = b''
         self.encrypted_pixels = []
         extra_data = b''
-        key = RSA.construct((public_key[0],public_key[1]))
+        key = RSA.construct((public_key[0], public_key[1]))
         cipher = PKCS1_OAEP.new(key)
-        
+
         data_to_encrypt_blocks = [data_to_encrypt[i:i + self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2]
-                                    for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2)]
+                                  for i in range(0, len(data_to_encrypt), self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2)]
         for data_to_encrypt_block in data_to_encrypt_blocks:
             encrypted_block = cipher.encrypt(data_to_encrypt_block)
             if len(data_to_encrypt_block) < self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2:
@@ -287,7 +320,6 @@ class rsa2048:
                                                          self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2]
                 extra_data += encrypted_block[self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2:]
         return extra_data, self.encrypted_pixels
-
 
     def get_encrypted_chunks(self) -> list:
         """ 
