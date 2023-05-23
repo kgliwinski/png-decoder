@@ -3,6 +3,7 @@ Contains the chunk class as well as child classes for
 several "special" chunks
 """
 import logging as log
+import zlib
 from typing import List, Dict, Tuple, Union
 
 class Chunk:
@@ -139,10 +140,79 @@ class Chunk:
         self.crc32 = new_crc
         return True
 
+    def replace_chunk_data(self, new_data: bytes) -> bool:
+        """
+        Replaces the current chunk data with a new one
+        """
+        self.chunk_data = new_data
+        self.chunk_length = len(new_data)
+        self.raw_length = self.chunk_length.to_bytes(
+            self.LENGTH_FIELD_LEN, 'big')
+        return True
+    
+    def assert_chunk(self) -> bool:
+        """
+        Asserts that the chunk is valid
+        """
+        # Placeholder for methods in inherited classes
+        return True
+
+# 0000001C  // byte length of IDAT chunk contents, 4 bytes, value 28
+# 49444154  // IDAT start - 4 bytes
+# 7801      // zlib Header                  2 bytes }
+# 01        // BFINAL = 1, BTYPE = 00       1 byte  }
+# 1100EEFF  // LEN & NLEN of data           4 bytes }
+# 00        // Filter = 0,                  1 byte  }
+# CC0000FF  // Pixel 1, Red-ish,            4 bytes }
+# 00CC00FF  // Pixel 2, Green-ish,          4 bytes }
+# 0000CCFF  // Pixel 3, Blue-ish,           4 bytes }
+# CCCCCCCC  // Pixel 4, transclucent grey,  4 bytes }
+# 3d3a0892  // Adler-32 check               4 bytes }
+# ba0400b4  // CRC of IDAT chunk, 4 bytes
+
 
 class IDAT(Chunk):
+
     def __init__(self, file_ptr) -> None:
         pass
+
+    def divide_chunk_into_sections(self):
+        self.zlib_header = self.chunk_data[0:2]
+        # print(self.zlib_header)
+        self.bfinal_btype = self.chunk_data[2:3]
+        self.len_nlen = self.chunk_data[3:7]
+        # print(self.len_nlen)
+        self.filter = self.chunk_data[7:8]
+        self.idat_data = self.chunk_data[8:-4]
+        self.adler32 = self.chunk_data[-4:]
+
+    def get_idat_data(self):
+        # print(len(self.idat_data))
+        return self.idat_data
+
+    def update_adler32(self):
+        self.adler32 = zlib.adler32(self.idat_data).to_bytes(4, 'big')
+        self.chunk_data = self.zlib_header + self.bfinal_btype + \
+            self.len_nlen + self.filter + self.idat_data + self.adler32
+
+    def replace_idat_data(self, new_idat_data: bytes):
+        self.idat_data = new_idat_data
+        # self.update_adler32()
+        self.chunk_data = self.zlib_header + self.bfinal_btype + \
+            self.len_nlen + self.filter + self.idat_data + self.adler32
+
+    def update_len_and_nlen(self, new_length: int):
+        negated = (~new_length) & 0xFF
+        self.len_nlen = new_length.to_bytes(
+            2, 'big') + negated.to_bytes(2, 'big')
+        self.chunk_data = self.zlib_header + self.bfinal_btype + \
+            self.len_nlen + self.filter + self.idat_data + self.adler32
+        
+    def assert_chunk(self) -> bool:
+        """
+        Asserts that the chunk is valid
+        """
+        return True
 
 
 class IHDR(Chunk):
@@ -218,6 +288,15 @@ class IHDR(Chunk):
             log.error(
                 "ERROR: Given bit depth (%d) is not allowed when color_type is %s (%d)", self.hdr_data["bit_depth"], self.hdr_data["color_type_str"], self.hdr_data["color_type"])
             return False
+    
+    def assert_chunk(self) -> bool:
+        if self.hdr_data["color_type"] not in [0, 2, 3, 4, 6]:
+            log.error("ERROR: Color type is not valid")
+            return False
+        if self.hdr_data["bit_depth"] not in [1, 2, 4, 8, 16]:
+            log.error("ERROR: Bit depth is not valid")
+            return False
+        return True
 
 
 class PLTE(Chunk):
@@ -237,6 +316,12 @@ class PLTE(Chunk):
 
     def get_plte_data(self) -> list:
         return self.plte_data
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length % 3 != 0:
+            log.error("ERROR: PLTE chunk length is not divisible by 3")
+            return False
+        return True
 
 
 class IEND(Chunk):
@@ -248,6 +333,12 @@ class IEND(Chunk):
         if self.chunk_length != 0:
             log.error(
                 "ERROR: IEND should be of length 0, but its length is %d", self.chunk_length)
+            return False
+        return True
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 0:
+            log.error("ERROR: IEND chunk length is not 0")
             return False
         return True
 
@@ -267,6 +358,12 @@ class gAMA(Chunk):
 
     def get_gama_data(self) -> float:
         return self.gamma
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 4:
+            log.error("ERROR: gAMA chunk length is not 4")
+            return False
+        return True
 
 
 class cHRM(Chunk):
@@ -304,6 +401,11 @@ class cHRM(Chunk):
     def get_chrm_data(self) -> dict:
         return {"white_point_x": self.white_point_x, "white_point_y": self.white_point_y, "red_x": self.red_x, "red_y": self.red_y, "green_x": self.green_x, "green_y": self.green_y, "blue_x": self.blue_x, "blue_y": self.blue_y}
 
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 32:
+            log.error("ERROR: cHRM chunk length is not 32")
+            return False
+        return True
 
 class bKGD(Chunk):
     def __init__(self) -> None:
@@ -329,6 +431,12 @@ class bKGD(Chunk):
 
     def get_bkgd_data(self) -> Union[int, tuple]:
         return self.background
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length not in (1, 2, 6):
+            log.error("ERROR: bKGD chunk length is not 1, 2 or 6")
+            return False
+        return True
 
 
 class sRGB(Chunk):
@@ -346,6 +454,12 @@ class sRGB(Chunk):
 
     def get_srgb_data(self) -> int:
         return self.rendering_intent
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length != 1:
+            log.error("ERROR: sRGB chunk length is not 1")
+            return False
+        return True
 
 
 class hIST(Chunk):
@@ -366,6 +480,12 @@ class hIST(Chunk):
 
     def get_hist_data(self) -> list:
         return self.histogram
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length % 2 != 0:
+            log.error("ERROR: hIST chunk length is not even")
+            return False
+        return True
 
 
 class eXIf(Chunk):
@@ -392,10 +512,22 @@ class eXIf(Chunk):
             log.error(
                 "ERROR: eXIF should have 42 as the next two bytes, but it has %d", self.exif_fourty_two)
             return False
-        print(
+        log.info(
             f"Exif endian: {self.exif_endian_str}, Exif data: {self.exif_fourty_two}")
 
         return True
 
     def get_exif_data(self) -> dict:
         return {"exif_endian": self.exif_endian_str, "exif_fourty_two": self.exif_fourty_two}
+    
+    def assert_chunk(self) -> bool:
+        if self.chunk_length <= 0:
+            log.error("ERROR: eXIF chunk length is not at least 6")
+            return False
+        if self.exif_endian != b'II' and self.exif_endian != b'MM':
+            log.error("ERROR: eXIF should start with II or MM")
+            return False
+        if self.exif_fourty_two != 42:
+            log.error("ERROR: eXIF should have 42 as the next two bytes")
+            return False
+        return True
