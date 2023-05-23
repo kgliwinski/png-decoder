@@ -304,6 +304,15 @@ class Png:
             log.info("No PLTE section in this image!")
             return None
         return self.chunks[index]
+    
+    def get_exif(self) -> chunk:
+        chunk_types = self.get_chunk_types()
+        try:
+            index = chunk_types.index("eXIf")
+        except:
+            log.info("No eXIf section in this image!")
+            return None
+        return self.chunks[index]
 
     def get_exif(self) -> chunk.Chunk:
         chunk_types = self.get_chunk_types()
