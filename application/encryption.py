@@ -52,13 +52,17 @@ class rsa2048:
         else:
             self.private_key = private_key
 
-        self.ENCRYPT_BLOCK_SIZE = self.key_size // 8
+        self.ENCRYPT_BLOCK_SIZE = self.key_size // 8 # which is 256
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT = self.ENCRYPT_BLOCK_SIZE - 1
         
-        self.ENCRYPT_BLOCK_SIZE_CFB = self.key_size // 8
+        self.ENCRYPT_BLOCK_SIZE_CFB = self.key_size // 8 # which is 256
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT_CFB = self.ENCRYPT_BLOCK_SIZE_CFB - 1
 
-        self.ENCRYPT_BLOCK_SIZE_2 = key_size // 16
+        # why is this equal to key_size // 16?
+        # https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation
+        # https://en.wikipedia.org/wiki/Block_size_(cryptography)
+        # https://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding
+        self.ENCRYPT_BLOCK_SIZE_2 = key_size // 16 # which is 128
         self.ENCRYPT_BLOCK_SIZE_SUBTRACT_2 = self.ENCRYPT_BLOCK_SIZE_2 - 1
 
         self.chunks_to_encrypt = chunks_to_encrypt
